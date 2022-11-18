@@ -19,6 +19,7 @@
     <modules>
         <module>semver-check-core</module>
         <module>semver-check-maven-plugin</module>
+        <module>semver-check-maven-plugin-example</module>
         <module>sample</module>
     </modules>
 
