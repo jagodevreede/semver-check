@@ -8,15 +8,15 @@
   <artifactId>hello-maven-plugin</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
-  <name>Test MyMojo</name>
+  <name>Test SemVertMojo</name>
 
   <build>
     <plugins>
       <plugin>
-        <artifactId>maven-my-plugin</artifactId>
+        <groupId>com.github.jagodevreede</groupId>
+        <artifactId>semver-check-maven-plugin</artifactId>
         <configuration>
-          <!-- Specify the MyMojo parameter -->
-          <outputDirectory>target/test-harness/project-to-test</outputDirectory>
+          <failOnMissingFile>false</failOnMissingFile>
         </configuration>
       </plugin>
     </plugins>
