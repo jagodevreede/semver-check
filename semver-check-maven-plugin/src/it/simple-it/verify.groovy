@@ -1,3 +1,3 @@
-File touchFile = new File( basedir, "target/touch.txt" );
+File checkFile = new File( basedir, "target/check.txt" );
 
-assert touchFile.isFile()
+assert checkFile.isFile()
