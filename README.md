@@ -57,6 +57,20 @@ The following configuration options are available:
 
 If you have questions, concerns, bug reports, etc, please file an issue in this repository's Issue Tracker, or better yet create a Pull Request
 
+If you contribute to this project please follow the [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) specification for commit messages.
+
+## How to release
+
+**Prerequisites:**
+- Have pgp keys getup on your machine
+- Have access to the group id on https://s01.oss.sonatype.org/
+
+First stage the release:
+
+> ```mvn -Ppublication clean deploy -DaltDeploymentRepository=local::default::file://`pwd`/target/staging-deploy```
+
+
+
 ----
 
 ## Open source licensing info
