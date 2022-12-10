@@ -21,7 +21,7 @@ Add the following configuration to your `pom.xml` and set the VERSION_NUMBER to 
         ...
         <plugin>
             <artifactId>semver-check-maven-plugin</artifactId>
-            <groupId>com.github.jagodevreede</groupId>
+            <groupId>io.github.jagodevreede</groupId>
             <version>VERSION_NUMBER</version>
             <configuration>
                 <failOnMissingFile>true</failOnMissingFile>
