@@ -8,7 +8,7 @@
     <artifactId>semver-check-maven-plugin</artifactId>
     <parent>
         <artifactId>semver-check</artifactId>
-        <groupId>com.github.jagodevreede</groupId>
+        <groupId>io.github.jagodevreede</groupId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
@@ -73,7 +73,7 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.github.jagodevreede</groupId>
+            <groupId>io.github.jagodevreede</groupId>
             <artifactId>semver-check-core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
