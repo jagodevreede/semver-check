@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <artifactId>semver-check</artifactId>
-        <groupId>com.github.jagodevreede</groupId>
+        <groupId>io.github.jagodevreede</groupId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
     <artifactId>semver-check-sample</artifactId>

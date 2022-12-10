@@ -13,7 +13,7 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>com.github.jagodevreede</groupId>
+        <groupId>io.github.jagodevreede</groupId>
         <artifactId>semver-check-maven-plugin</artifactId>
         <configuration>
           <failOnMissingFile>false</failOnMissingFile>
