@@ -1,0 +1,78 @@
+project:
+  name: semver-check
+  description: Maven plugin for Semantic Versioning
+  longDescription: This maven plugin allows you to check (or determine) the next version of your module, based on the rules of Semantic Versioning.
+  authors:
+    - Jago de Vreede
+  license: Apache-2.0
+  links:
+    homepage: https://github.com/jagodevreede/semver-check
+  java:
+    groupId: io.github.jagodevreede
+    version: 11
+  inceptionYear: 2022
+
+signing:
+  active: ALWAYS
+  armored: true
+
+release:
+  github:
+    username: jagodevreede
+    overwrite: true
+    draft: false
+    sign: true
+    changelog:
+      formatted: ALWAYS
+      preset: conventional-commits
+      format: '- {{commitShortHash}} {{commitTitle}}'
+      labelers:
+        - label: 'feature'
+          title: 'Resolves #'
+          body: 'Resolves #'
+        - label: 'issue'
+          title: 'Fixes #'
+          body: 'Fixes #'
+        - label: 'issue'
+          title: 'Relates to #'
+          body: 'Relates to #'
+        - label: 'task'
+          title: '[chore]'
+      categories:
+        - title: 'Features'
+          key: 'features'
+          labels:
+            - 'feature'
+        - title: 'Issues'
+          key: 'issues'
+          labels:
+            - 'issue'
+        - title: 'Tasks'
+          key: 'tasks'
+          labels:
+            - 'task'
+        - title: 'Documentation'
+          key: 'docs'
+          labels:
+            - 'docs'
+      hide:
+        categories:
+          - 'merge'
+          - 'build'
+          - '-'
+        contributors:
+          - 'GitHub'
+      replacers:
+        - search: '\[chore\] '
+
+deploy:
+  maven:
+    nexus2:
+      maven-central:
+        active: ALWAYS
+        url: https://s01.oss.sonatype.org/service/local
+        closeRepository: true
+        releaseRepository: false
+        applyMavenCentralRules: false
+        stagingRepositories:
+          - target/staging-deploy
