@@ -1,5 +1,8 @@
 .idea/
 target/
+out/
 
 *.class
 *.jar
+*.versionsBackup
+*.log

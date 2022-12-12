@@ -64,12 +64,23 @@ If you contribute to this project please follow the [conventional commits](https
 **Prerequisites:**
 - Have pgp keys getup on your machine
 - Have access to the group id on https://s01.oss.sonatype.org/
+- Have [jreleaser](https://jreleaser.org/guide/latest/install.html) installed
 
-First stage the release:
+First set the correct version to be released:
+
+> ```mvn versions:set -DnewVersion=1.2.3```
+
+Tag this release with tag v1.2.3
+
+Then stage the release:
 
 > ```mvn -Ppublication clean deploy -DaltDeploymentRepository=local::default::file://`pwd`/target/staging-deploy```
 
+The start the actual release:
 
+> ```mvn -Ppublication jreleaser:full-release```
+> Add dry drun if you first need to check what it will do:
+> `-Djreleaser.dry.run=true`
 
 ----
 
