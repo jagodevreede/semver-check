@@ -4,10 +4,11 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.jagodevreede</groupId>
     <artifactId>semver-check</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.1</version>
     <packaging>pom</packaging>
     <name>SemVer check root</name>
     <url>https://github.com/jagodevreede/semver-check</url>
+    <description>This is the root pom for the semver-check maven plugin</description>
     <inceptionYear>2022</inceptionYear>
 
     <licenses>
@@ -43,7 +44,6 @@
         <mockito.version>4.9.0</mockito.version>
 
         <nexus-staging-maven-plugin.version>1.6.13</nexus-staging-maven-plugin.version>
-        <jreleaser-maven-plugin.version>1.3.1</jreleaser-maven-plugin.version>
     </properties>
 
     <modules>
@@ -167,11 +167,6 @@
                     <artifactId>nexus-staging-maven-plugin</artifactId>
                     <version>${nexus-staging-maven-plugin.version}</version>
                 </plugin>
-                <plugin>
-                    <groupId>org.jreleaser</groupId>
-                    <artifactId>jreleaser-maven-plugin</artifactId>
-                    <version>${jreleaser-maven-plugin.version}</version>
-                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
@@ -240,39 +235,6 @@
                                 </configuration>
                             </execution>
                         </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.jreleaser</groupId>
-                        <artifactId>jreleaser-maven-plugin</artifactId>
-                        <configuration>
-                            <jreleaser>
-                                <signing>
-                                    <active>ALWAYS</active>
-                                    <armored>true</armored>
-                                </signing>
-                                <release>
-                                    <github>
-                                        <changelog>
-                                            <formatted>ALWAYS</formatted>
-                                            <preset>conventional-commits</preset>
-                                        </changelog>
-                                    </github>
-                                </release>
-                                <deploy>
-                                    <maven>
-                                        <nexus2>
-                                            <maven-central>
-                                                <active>ALWAYS</active>
-                                                <url>https://s01.oss.sonatype.org/service/local</url>;
-                                                <closeRepository>false</closeRepository>
-                                                <releaseRepository>false</releaseRepository>
-                                                <stagingRepositories>target/staging-deploy</stagingRepositories>
-                                            </maven-central>
-                                        </nexus2>
-                                    </maven>
-                                </deploy>
-                            </jreleaser>
-                        </configuration>
                     </plugin>
                 </plugins>
             </build>
