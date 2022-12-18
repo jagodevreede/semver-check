@@ -70,6 +70,8 @@ the [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) speci
 
 ## How to release
 
+All automated with the github release action.
+
 **Prerequisites:**
 
 - Have pgp keys getup on your machine
