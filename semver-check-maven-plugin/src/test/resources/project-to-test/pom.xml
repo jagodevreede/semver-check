@@ -16,7 +16,7 @@
         <groupId>io.github.jagodevreede</groupId>
         <artifactId>semver-check-maven-plugin</artifactId>
         <configuration>
-          <failOnMissingFile>false</failOnMissingFile>
+          <haltOnFailure>false</haltOnFailure>
         </configuration>
       </plugin>
     </plugins>

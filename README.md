@@ -28,7 +28,7 @@ Add the following configuration to your `pom.xml` and set the VERSION_NUMBER to 
             <groupId>io.github.jagodevreede</groupId>
             <version>VERSION_NUMBER</version>
             <configuration>
-                <failOnMissingFile>true</failOnMissingFile>
+                <haltOnFailure>true</haltOnFailure>
                 <outputFileName>nextVersion.txt</outputFileName>
             </configuration>
             <executions>
@@ -53,12 +53,12 @@ This plugin can be used with a multimodule project, an example project can be fo
 
 The following configuration options are available:
 
-| Property name     | Default value     | Description                                                                                                                                                                           |
-|-------------------|-------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| skip              | `false`           | If set to `true` then the build will skip the execution of this plugin                                                                                                                |
-| failOnMissingFile | `false`           | If set to `true` then the build will fail if the plugin can't find the generated artifact                                                                                             |
-| ignoreSnapshots   | `true`            | If set to `false` then the plugin will also compare to SNAPSHOT versions if it can find any (in local repo's for example)                                                             |
-| outputFileName    | `nextVersion.txt` | The name of the file where the next version in plain text will be written to. This file is located in the `target` folder. If the property is left empty then no file will be created | 
+| Property name   | Default value     | Description                                                                                                                                                                           |
+|-----------------|-------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| skip            | `false`           | If set to `true` then the build will skip the execution of this plugin                                                                                                                |
+| haltOnFailure   | `true`            | If set to `false` then the build will not fail if the plugin encounter a problem, but only log a warning                                                                              |
+| ignoreSnapshots | `true`            | If set to `false` then the plugin will also compare to SNAPSHOT versions if it can find any (in local repo's for example)                                                             |
+| outputFileName  | `nextVersion.txt` | The name of the file where the next version in plain text will be written to. This file is located in the `target` folder. If the property is left empty then no file will be created | 
 
 ## Getting involved
 

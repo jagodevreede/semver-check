@@ -35,16 +35,14 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class SemVerMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     MavenProject project;
-    @Parameter(defaultValue = "${project.build.finalName}", readonly = true, required = true)
-    String finalName;
 
     @Parameter(property = "skip", defaultValue = "false")
     boolean skip;
     @Parameter(property = "ignoreSnapshots", defaultValue = "true")
     boolean ignoreSnapshots;
 
-    @Parameter(property = "failOnMissingFile", defaultValue = "true")
-    boolean failOnMissingFile;
+    @Parameter(property = "haltOnFailure", defaultValue = "true")
+    boolean haltOnFailure;
 
     @Parameter(property = "outputFileName", defaultValue = "nextVersion.txt")
     String outputFileName;
@@ -69,30 +67,25 @@ public class SemVerMojo extends AbstractMojo {
     public void execute() throws MojoExecutionException {
         if (skip) {
             getLog().info("Skipping semantic versioning check, as skip is set to true");
-        }
-        if (project == null) {
-            throw new MojoExecutionException("Unable to get project information");
-        }
-        if ("pom".equals(project.getPackaging())) {
-            getLog().info("No semantic versioning information for pom packaging");
             return;
         }
-        Artifact artifact = project.getArtifact();
-        File workingFile = new File(project.getBuild().getDirectory(), finalName + "." + (artifact.getClassifier() != null ? artifact.getClassifier() : "jar"));
-        getLog().debug("Using as original input file: " + workingFile);
-
-        if (!workingFile.isFile()) {
-            if (failOnMissingFile) {
-                throw new MojoExecutionException("Unable to read file " + workingFile);
-            }
-            getLog().warn("Unable to read file " + workingFile);
-            return;
-        }
-
         try {
+            haltOnCondition(project == null, "Unable to get project information");
+            if ("pom".equals(project.getPackaging())) {
+                getLog().info("No semantic versioning information for pom packaging");
+                return;
+            }
+            Artifact artifact = project.getArtifact();
+            File workingFile = new File(project.getBuild().getDirectory(), project.getBuild().getFinalName() + "." + (artifact.getClassifier() != null ? artifact.getClassifier() : "jar"));
+            getLog().debug("Using as original input file: " + workingFile);
+
+            haltOnCondition(!workingFile.isFile(), "Unable to read file " + workingFile);
+
             determineVersionInformation(artifact, workingFile);
         } catch (ArtifactMetadataRetrievalException | IOException e) {
             throw new MojoExecutionException(e.getMessage());
+        } catch (HaltException he) {
+            getLog().warn(he.getMessage());
         }
     }
 
@@ -215,8 +208,12 @@ public class SemVerMojo extends AbstractMojo {
                 .collect(Collectors.toList());
     }
 
-    // Visible for testing
-    public void setFailOnMissingFile(boolean failOnMissingFile) {
-        this.failOnMissingFile = failOnMissingFile;
+    private void haltOnCondition(boolean condition, String message) throws MojoExecutionException, HaltException {
+        if (condition) {
+            if (haltOnFailure) {
+                throw new MojoExecutionException(message);
+            }
+            throw new HaltException(message);
+        }
     }
 }

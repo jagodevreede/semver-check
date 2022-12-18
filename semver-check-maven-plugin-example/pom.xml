@@ -45,7 +45,7 @@
                 <configuration>
                     <!-- Below are default configuration's and can be changed, or left out if the default value works for you -->
                     <skip>false</skip>
-                    <failOnMissingFile>true</failOnMissingFile> <!-- If set to true this plugin will not do anything if the output file is not there -->
+                    <haltOnFailure>true</haltOnFailure> <!-- If set to true this plugin will not do anything if the output file is not there -->
                     <ignoreSnapshots>false</ignoreSnapshots>
                     <outputFileName>nextVersion.txt</outputFileName>
                 </configuration>

@@ -47,6 +47,7 @@ class SemVerMojoTest {
     @Test
     void noProjectShouldFail() {
         subject = new SemVerMojo(null, null);
+        subject.haltOnFailure = true;
         assertThatThrownBy(() -> subject.execute())
                 .isInstanceOf(MojoExecutionException.class)
                 .hasMessageContaining("Unable to get project information");
