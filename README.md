@@ -1,5 +1,9 @@
 # SemVer check
 
+![GitHub](https://img.shields.io/github/license/jagodevreede/semver-check)
+![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/jagodevreede/semver-check?label=Latest%20release)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/jagodevreede/semver-check/maven.yml?branch=main)
+
 This maven plugin allows you to check (or determine) the next version of your module, based on the rules
 of [Semantic Versioning](https://semver.org/).
 
