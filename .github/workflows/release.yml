@@ -26,6 +26,11 @@ jobs:
           java-version: '11'
           distribution: 'temurin'
           cache: maven
+      - id: install-secret-key
+        name: Install gpg secret key
+        run: |
+          cat <(echo -e "${{ secrets.JRELEASER_GPG_SECRET_KEY }}") | gpg --batch --import
+          gpg --list-secret-keys --keyid-format LONG
       - name: Set release version
         run: |
           export GPG_TTY=$(tty)
@@ -46,7 +51,7 @@ jobs:
           SIGN_KEY: ${{ secrets.JRELEASER_GPG_SECRET_KEY }}
           SIGN_KEY_PASS: ${{ secrets.JRELEASER_GPG_PASSPHRASE }}
         run: |
-          mvn -Ppublication clean deploy -DaltDeploymentRepository=local::default::file://`pwd`/target/staging-deploy
+          mvn --no-transfer-progress --batch-mode -Dgpg.passphrase=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }} -Ppublication clean deploy -DaltDeploymentRepository=local::default::file://`pwd`/target/staging-deploy
 
       - name: Run JReleaser
         uses: jreleaser/release-action@v2
