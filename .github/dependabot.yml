@@ -12,6 +12,6 @@ updates:
     ignore:
       - dependency-name: "org.apache.maven:*" # Only API, we target a specific version of maven.
     commit-message:
-      prefix: fix
+      prefix: build
       prefix-development: build
       include: scope
