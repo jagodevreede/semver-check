@@ -42,8 +42,6 @@
 
         <slf4j.version>2.0.5</slf4j.version>
         <mockito.version>4.9.0</mockito.version>
-
-        <nexus-staging-maven-plugin.version>1.6.13</nexus-staging-maven-plugin.version>
     </properties>
 
     <modules>
@@ -161,11 +159,6 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-gpg-plugin</artifactId>
                     <version>1.5</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.sonatype.plugins</groupId>
-                    <artifactId>nexus-staging-maven-plugin</artifactId>
-                    <version>${nexus-staging-maven-plugin.version}</version>
                 </plugin>
             </plugins>
         </pluginManagement>

@@ -10,6 +10,7 @@ import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactResolutionRequest;
 import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
+import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -23,6 +24,7 @@ import javax.inject.Inject;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -36,22 +38,21 @@ public class SemVerMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project.build.finalName}", readonly = true, required = true)
     String finalName;
 
+    @Parameter(property = "skip", defaultValue = "false")
+    boolean skip;
     @Parameter(property = "ignoreSnapshots", defaultValue = "true")
     boolean ignoreSnapshots;
 
     @Parameter(property = "failOnMissingFile", defaultValue = "true")
     boolean failOnMissingFile;
 
-    @Parameter(defaultValue = "${project.build.directory}", property = "outputDir", required = true)
-    File outputDirectory;
-
-    @Parameter(property = "outputToFile")
-    File outputToFile;
+    @Parameter(property = "outputFileName", defaultValue = "nextVersion.txt")
+    String outputFileName;
 
     // Yes use the deprecated class as the new version is not injected?
-    ArtifactMetadataSource artifactMetadataSource;
+    private final ArtifactMetadataSource artifactMetadataSource;
 
-    final RepositorySystem repoSystem;
+    private final RepositorySystem repoSystem;
 
     @Parameter(defaultValue = "${project.remoteArtifactRepositories}", readonly = true)
     List<ArtifactRepository> remoteArtifactRepositories;
@@ -66,11 +67,18 @@ public class SemVerMojo extends AbstractMojo {
     }
 
     public void execute() throws MojoExecutionException {
+        if (skip) {
+            getLog().info("Skipping semantic versioning check, as skip is set to true");
+        }
         if (project == null) {
             throw new MojoExecutionException("Unable to get project information");
         }
+        if ("pom".equals(project.getPackaging())) {
+            getLog().info("No semantic versioning information for pom packaging");
+            return;
+        }
         Artifact artifact = project.getArtifact();
-        File workingFile = new File(outputDirectory, finalName + "." + (artifact.getClassifier() != null ? artifact.getClassifier() : "jar"));
+        File workingFile = new File(project.getBuild().getDirectory(), finalName + "." + (artifact.getClassifier() != null ? artifact.getClassifier() : "jar"));
         getLog().debug("Using as original input file: " + workingFile);
 
         if (!workingFile.isFile()) {
@@ -90,28 +98,62 @@ public class SemVerMojo extends AbstractMojo {
 
     private void determineVersionInformation(Artifact artifact, File workingFile) throws ArtifactMetadataRetrievalException, IOException, MojoExecutionException {
         List<ArtifactVersion> artifactVersions = getArtifactVersions(artifact);
+        SemVerType semVerType = SemVerType.NONE;
+        ArtifactVersion artifactVersion;
         if (artifactVersions.isEmpty()) {
             getLog().info("No other versions available for " + artifact.getGroupId() + ":" + artifact.getArtifactId());
+            artifactVersion = new DefaultArtifactVersion(artifact.getVersion());
         } else {
-            ArtifactVersion artifactVersion = artifactVersions.get(0);
+            artifactVersion = artifactVersions.get(0);
             File file = getLastVersion(artifact, artifactVersion);
             if (!file.exists()) {
                 getLog().warn("Artifact " + artifactVersion + " has no attached file?");
             } else {
                 getLog().info("Checking SemVer against last known version " + artifactVersion);
                 SemVerChecker semVerChecker = new SemVerChecker(workingFile, file);
-                SemVerType semVerType = semVerChecker.determineSemVerType();
-                String nextVersion = getNextVersion(artifactVersion, semVerType);
-                getLog().info("Determined SemVer type as: " +
-                        semVerType.toString().toLowerCase(Locale.ROOT) +
-                        ", next version should be: " + nextVersion);
-                if (outputToFile != null) {
-                    try (FileWriter fileWriter = new FileWriter(outputToFile, UTF_8)) {
-                        fileWriter.append(nextVersion);
-                    }
-                }
+                semVerType = semVerChecker.determineSemVerType();
             }
         }
+        String nextVersion = getNextVersion(artifactVersion, semVerType);
+        getLog().info("Determined SemVer type as: " +
+                semVerType.toString().toLowerCase(Locale.ROOT) +
+                ", next version should be: " + nextVersion);
+        if (outputFileName != null) {
+            writeFile(project, nextVersion);
+            if (project.getParent() != null) {
+                updateParent(nextVersion, project.getParent());
+            }
+        }
+    }
+
+    // Visible for testing
+    void writeFile(MavenProject mavenProject, String nextVersion) throws MojoExecutionException {
+        File outputDirectory = new File(mavenProject.getBuild().getDirectory());
+        outputDirectory.mkdirs();
+        try (FileWriter fileWriter = new FileWriter(new File(outputDirectory, outputFileName), UTF_8)) {
+            fileWriter.append(nextVersion);
+        } catch (IOException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        }
+    }
+
+    // Visible for testing
+    void updateParent(String nextVersion, MavenProject mavenProject) throws MojoExecutionException {
+        String combinedNextVersion = nextVersion;
+        ArtifactVersion nextArtifactVersion = new DefaultArtifactVersion(nextVersion);
+        File outputFileOfProject = new File(mavenProject.getBuild().getDirectory(), outputFileName);
+        if (outputFileOfProject.exists()) {
+            try {
+                String contentOfParent = Files.readString(outputFileOfProject.toPath());
+                ArtifactVersion nextArtifactVersionOfParent = new DefaultArtifactVersion(contentOfParent);
+                if (nextArtifactVersionOfParent.compareTo(nextArtifactVersion) > 0) {
+                    combinedNextVersion = contentOfParent;
+                }
+            } catch (IOException ioe) {
+                getLog().error("Unable to read " + outputFileOfProject.getAbsolutePath());
+            }
+        }
+        writeFile(mavenProject, combinedNextVersion);
     }
 
     private File getLastVersion(Artifact artifact, ArtifactVersion artifactVersion) throws MojoExecutionException {
