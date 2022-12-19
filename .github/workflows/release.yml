@@ -26,11 +26,6 @@ jobs:
           java-version: '11'
           distribution: 'temurin'
           cache: maven
-      - id: install-secret-key
-        name: Install gpg secret key
-        run: |
-          cat <(echo -e "${{ secrets.JRELEASER_GPG_SECRET_KEY }}") | base64 --decode | gpg --batch --import
-          gpg --list-secret-keys --keyid-format LONG
       - name: Set release version
         run: |
           export GPG_TTY=$(tty)
@@ -47,17 +42,14 @@ jobs:
           tags: true
 
       - name: Stage release
-        env:
-          SIGN_KEY: ${{ secrets.JRELEASER_GPG_SECRET_KEY }}
-          SIGN_KEY_PASS: ${{ secrets.JRELEASER_GPG_PASSPHRASE }}
         run: |
-          export GPG_TTY=`tty`
-          mvn --no-transfer-progress --batch-mode -Dgpg.passphrase=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }} -Ppublication clean deploy -DaltDeploymentRepository=local::default::file://`pwd`/target/staging-deploy
+          mvn --no-transfer-progress --batch-mode -Ppublication clean deploy -DaltDeploymentRepository=local::default::file://`pwd`/target/staging-deploy
 
       - name: Run JReleaser
         uses: jreleaser/release-action@v2
         with:
           setup-java: false
+          version: early-access
         env:
           JRELEASER_PROJECT_VERSION: ${{ github.event.inputs.version }}
           JRELEASER_GITHUB_TOKEN: ${{ secrets.JRELEASER_GITHUB_TOKEN }}
@@ -69,7 +61,6 @@ jobs:
 
       - name: Set release version
         run: |
-          export GPG_TTY=$(tty)
           mvn --no-transfer-progress --batch-mode versions:set -DnewVersion=${{ github.event.inputs.nextVersion }}
           git commit -a -m "Setting SNAPSHOT version ${{ github.event.inputs.nextVersion }}-SNAPSHOT"
 

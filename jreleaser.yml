@@ -16,6 +16,11 @@ signing:
   active: ALWAYS
   armored: true
 
+files:
+  globs:
+    - pattern: target/staging-deploy/**/*.jar
+    - pattern: target/staging-deploy/**/*.pom
+
 release:
   github:
     username: jagodevreede
@@ -73,6 +78,5 @@ deploy:
         url: https://s01.oss.sonatype.org/service/local
         closeRepository: true
         releaseRepository: false
-        applyMavenCentralRules: false
         stagingRepositories:
           - target/staging-deploy
