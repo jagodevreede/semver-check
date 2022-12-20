@@ -67,6 +67,7 @@ release:
           - '-'
         contributors:
           - 'GitHub'
+          - 'github-actions[bot]'
       replacers:
         - search: '\[chore\] '
 
