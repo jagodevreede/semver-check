@@ -30,16 +30,16 @@ jobs:
         run: |
           export GPG_TTY=$(tty)
           mvn --no-transfer-progress --batch-mode versions:set -DnewVersion=${{ github.event.inputs.version }}
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -a -m "Releasing version ${{ github.event.inputs.version }}"
-          git tag v${{ github.event.inputs.version }}
 
       - name: Commit & Push changes
         uses: actions-js/push@master
         with:
           github_token: ${{ secrets.JRELEASER_GITHUB_TOKEN }}
-          tags: true
+          message: Releasing version ${{ github.event.inputs.version }}
+
+      - name: Tag release version
+          run: |
+            git tag v${{ github.event.inputs.version }}
 
       - name: Stage release
         run: |
@@ -62,12 +62,12 @@ jobs:
       - name: Set release version
         run: |
           mvn --no-transfer-progress --batch-mode versions:set -DnewVersion=${{ github.event.inputs.nextVersion }}
-          git commit -a -m "Setting SNAPSHOT version ${{ github.event.inputs.nextVersion }}-SNAPSHOT"
 
       - name: Commit & Push changes
         uses: actions-js/push@master
         with:
           github_token: ${{ secrets.JRELEASER_GITHUB_TOKEN }}
+          message: Setting SNAPSHOT version ${{ github.event.inputs.nextVersion }}-SNAPSHOT
           tags: true
 
       - name: JReleaser release output
