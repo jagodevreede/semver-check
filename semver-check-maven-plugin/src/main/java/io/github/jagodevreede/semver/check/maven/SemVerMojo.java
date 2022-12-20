@@ -176,17 +176,18 @@ public class SemVerMojo extends AbstractMojo {
         return result[0];
     }
 
-    private String getNextVersion(ArtifactVersion artifactVersion, SemVerType semVerType) {
+    /// Visible for testing
+    String getNextVersion(ArtifactVersion artifactVersion, SemVerType semVerType) {
         String nextVersion = "?";
         switch (semVerType) {
             case MAJOR:
-                nextVersion = artifactVersion.getMajorVersion() + 1 + ".0.0";
+                nextVersion = (artifactVersion.getMajorVersion() + 1) + ".0.0";
                 break;
             case MINOR:
-                nextVersion = artifactVersion.getMajorVersion() + "." + artifactVersion.getMinorVersion() + 1 + ".0";
+                nextVersion = artifactVersion.getMajorVersion() + "." + (artifactVersion.getMinorVersion() + 1) + ".0";
                 break;
             case PATCH:
-                nextVersion = artifactVersion.getMajorVersion() + "." + artifactVersion.getMinorVersion() + "." + artifactVersion.getIncrementalVersion() + 1;
+                nextVersion = artifactVersion.getMajorVersion() + "." + artifactVersion.getMinorVersion() + "." + (artifactVersion.getIncrementalVersion() + 1);
                 break;
             case NONE:
                 nextVersion = artifactVersion.getMajorVersion() + "." + artifactVersion.getMinorVersion() + "." + artifactVersion.getIncrementalVersion();
