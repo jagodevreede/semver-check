@@ -26,15 +26,38 @@ public class SemVerChecker {
     private final JarFile original;
     private final JarFile newJar;
 
+    /**
+     * @param original the original JAR file
+     * @param newJar the new JAR file to compare against the original
+     */
     public SemVerChecker(final File original, final File newJar) throws IOException {
         this(JarFileHelper.getJarFile(original), JarFileHelper.getJarFile(newJar));
     }
 
+    /**
+     * @param original the original JAR file
+     * @param newJar the new JAR file to compare against the original
+     */
     public SemVerChecker(final JarFile original, final JarFile newJar) {
         this.original = original;
         this.newJar = newJar;
     }
 
+    /**
+     * Determines the semantic version type (major, minor, or patch) based on the difference between two JAR files.
+     *
+     * The method compares the classes in the original JAR file to the classes in the new JAR file. If a class
+     * in the original JAR file does not exist in the new JAR file, it is considered a major version change.
+     * If a class in the original JAR file exists in the new JAR file and the two classes have differences,
+     * the method calls the `determineClassDifference` method to determine the appropriate version change.
+     * If a class in the original JAR file exists in the new JAR file and the two classes have no differences,
+     * the method compares the byte-level content of the class in the original JAR file to the class in the new JAR file.
+     * If the byte-level content is different, it is considered a patch version change. If the byte-level content is the same,
+     * it is considered no change.
+     *
+     * @return the semantic version type
+     * @throws IOException if there is an error reading from the JAR files
+     */
     public SemVerType determineSemVerType() throws IOException {
         Set<Class> classesInOriginalJar = getClassesInJar(original);
         Set<Class> classesInNewJar = getClassesInJar(newJar);
