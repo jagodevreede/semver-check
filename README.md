@@ -98,6 +98,8 @@ Lastly set the next snapshot version:
 
 > ```mvn versions:set -DnewVersion=1.2.4-SNAPSHOT```
 
+Close the release in maven central at https://s01.oss.sonatype.org/#stagingRepositories
+
 ----
 
 ## Open source licensing info
