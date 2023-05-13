@@ -9,7 +9,7 @@
     <parent>
         <artifactId>semver-check-sample</artifactId>
         <groupId>io.github.jagodevreede</groupId>
-        <version>0.0.4</version>
+        <version>0.0.4-SNAPSHOT</version>
     </parent>
 
     <build>
