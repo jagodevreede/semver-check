@@ -59,6 +59,14 @@ public class SemVerChecker {
      * @throws IOException if there is an error reading from the JAR files
      */
     public SemVerType determineSemVerType() throws IOException {
+        int originalClassVersion = getVersionOfClass(original);
+        int newJarClassVersion = getVersionOfClass(newJar);
+
+        if (originalClassVersion < newJarClassVersion) {
+            log.info("The new JAR file contains a higher class version, changed from {} to {}", originalClassVersion, newJarClassVersion);
+            return MAJOR;
+        }
+
         Set<Class> classesInOriginalJar = getClassesInJar(original);
         Set<Class> classesInNewJar = getClassesInJar(newJar);
 
@@ -109,6 +117,10 @@ public class SemVerChecker {
         classResult = updateResult(classResult, methodResult);
 
         return classResult;
+    }
+
+    private int getVersionOfClass(JarFile jarFile) {
+        return ClassVersion.getVersionNumber(jarFile);
     }
 
     private <M extends Member> SemVerType getSemVerType(Class originalClass, M[] originalClassMembers, M[] inNewJarMembers) {
