@@ -1,5 +1,6 @@
 package io.github.jagodevreede.semver.check.maven;
 
+import io.github.jagodevreede.semver.check.core.Configuration;
 import io.github.jagodevreede.semver.check.core.SemVerChecker;
 import io.github.jagodevreede.semver.check.core.SemVerType;
 import org.apache.maven.artifact.Artifact;
@@ -25,6 +26,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -36,7 +38,7 @@ public class SemVerMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     MavenProject project;
 
-    @Parameter(property = "skip", defaultValue = "false")
+    @Parameter(property = "semver.skip", defaultValue = "false")
     boolean skip;
     @Parameter(property = "ignoreSnapshots", defaultValue = "true")
     boolean ignoreSnapshots;
@@ -46,6 +48,9 @@ public class SemVerMojo extends AbstractMojo {
 
     @Parameter(property = "outputFileName", defaultValue = "nextVersion.txt")
     String outputFileName;
+
+    @Parameter(property = "excludePackages", required = true)
+    String[] excludePackages;
 
     // Yes use the deprecated class as the new version is not injected?
     private final ArtifactMetadataSource artifactMetadataSource;
@@ -90,6 +95,9 @@ public class SemVerMojo extends AbstractMojo {
     }
 
     private void determineVersionInformation(Artifact artifact, File workingFile) throws ArtifactMetadataRetrievalException, IOException, MojoExecutionException {
+        if (getLog().isDebugEnabled() && excludePackages != null) {
+            getLog().debug("Excluded packages are " + getExcludePackages());
+        }
         List<ArtifactVersion> artifactVersions = getArtifactVersions(artifact);
         SemVerType semVerType = SemVerType.NONE;
         ArtifactVersion artifactVersion;
@@ -103,7 +111,8 @@ public class SemVerMojo extends AbstractMojo {
                 getLog().warn("Artifact " + artifactVersion + " has no attached file?");
             } else {
                 getLog().info("Checking SemVer against last known version " + artifactVersion);
-                SemVerChecker semVerChecker = new SemVerChecker(workingFile, file);
+                Configuration configuration = new Configuration(getExcludePackages());
+                SemVerChecker semVerChecker = new SemVerChecker(workingFile, file, configuration);
                 semVerType = semVerChecker.determineSemVerType();
             }
         }
@@ -117,6 +126,13 @@ public class SemVerMojo extends AbstractMojo {
                 updateParent(nextVersion, project.getParent());
             }
         }
+    }
+
+    private List<String> getExcludePackages() {
+        if (excludePackages == null) {
+            return List.of();
+        }
+        return Arrays.asList(excludePackages);
     }
 
     // Visible for testing

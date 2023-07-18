@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 
 import static io.github.jagodevreede.semver.check.core.SemVerType.*;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -18,6 +19,7 @@ class SemVerCheckerGeneratedTest {
     private final File baseJar;
     private final File jarAsOriginal = new File("target/original.jar");
     private final File jarAsChanged = new File("target/changed.jar");
+    private final Configuration emptyConfiguration = new Configuration(List.of());
 
     SemVerCheckerGeneratedTest() {
         baseJar = new File("../sample/sample-base/target/semver-check-sample-base-1.0.0-SNAPSHOT.jar");
@@ -104,7 +106,7 @@ class SemVerCheckerGeneratedTest {
     }
 
     private void check(SemVerType verResult) throws IOException {
-        final SemVerChecker subject = new SemVerChecker(jarAsOriginal, jarAsChanged);
+        final SemVerChecker subject = new SemVerChecker(jarAsOriginal, jarAsChanged, emptyConfiguration);
         var result = subject.determineSemVerType();
         assertThat(result).isEqualTo(verResult);
     }

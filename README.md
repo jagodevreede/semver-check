@@ -13,7 +13,7 @@ This plugin requires Maven 3.3.9 and Java 11 or higher to be able to run.
 
 ## Usage
 
-There is an [example project](semver-check-maven-plugin-example/) that has a minium configuration.
+There is an [example project](semver-check-maven-plugin-example) that has a minimum configuration but all options specified.
 
 Add the following configuration to your `pom.xml` and set the VERSION_NUMBER to the latest version released.
 
@@ -47,7 +47,7 @@ Add the following configuration to your `pom.xml` and set the VERSION_NUMBER to 
 </build>
 ```
 
-This plugin can be used with a multimodule project, an example project can be found [here]](semver-check-maven-plugin-multi-module-example/).
+This plugin can be used with a multimodule project, an example project can be found [here]](semver-check-maven-plugin-multi-module-example).
 
 ## Configuration
 
@@ -58,7 +58,8 @@ The following configuration options are available:
 | skip            | `false`           | If set to `true` then the build will skip the execution of this plugin                                                                                                                |
 | haltOnFailure   | `true`            | If set to `false` then the build will not fail if the plugin encounter a problem, but only log a warning                                                                              |
 | ignoreSnapshots | `true`            | If set to `false` then the plugin will also compare to SNAPSHOT versions if it can find any (in local repo's for example)                                                             |
-| outputFileName  | `nextVersion.txt` | The name of the file where the next version in plain text will be written to. This file is located in the `target` folder. If the property is left empty then no file will be created | 
+| outputFileName  | `nextVersion.txt` | The name of the file where the next version in plain text will be written to. This file is located in the `target` folder. If the property is left empty then no file will be created |
+| excludePackages |                   | Ignores packages can be a comma separated list or a list of excludePackage (See [example project](semver-check-maven-plugin-example) for example)                                     |
 
 ## Getting involved
 

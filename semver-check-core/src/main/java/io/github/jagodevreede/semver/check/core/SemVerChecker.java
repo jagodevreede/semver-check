@@ -25,27 +25,29 @@ public class SemVerChecker {
 
     private final JarFile original;
     private final JarFile newJar;
+    private final Configuration configuration;
 
     /**
      * @param original the original JAR file
-     * @param newJar the new JAR file to compare against the original
+     * @param newJar   the new JAR file to compare against the original
      */
-    public SemVerChecker(final File original, final File newJar) throws IOException {
-        this(JarFileHelper.getJarFile(original), JarFileHelper.getJarFile(newJar));
+    public SemVerChecker(final File original, final File newJar, final Configuration configuration) throws IOException {
+        this(JarFileHelper.getJarFile(original), JarFileHelper.getJarFile(newJar), configuration);
     }
 
     /**
      * @param original the original JAR file
-     * @param newJar the new JAR file to compare against the original
+     * @param newJar   the new JAR file to compare against the original
      */
-    public SemVerChecker(final JarFile original, final JarFile newJar) {
+    public SemVerChecker(final JarFile original, final JarFile newJar, final Configuration configuration) {
         this.original = original;
         this.newJar = newJar;
+        this.configuration = configuration;
     }
 
     /**
      * Determines the semantic version type (major, minor, or patch) based on the difference between two JAR files.
-     *
+     * <p>
      * The method compares the classes in the original JAR file to the classes in the new JAR file. If a class
      * in the original JAR file does not exist in the new JAR file, it is considered a major version change.
      * If a class in the original JAR file exists in the new JAR file and the two classes have differences,
@@ -71,6 +73,9 @@ public class SemVerChecker {
         Set<Class> classesInNewJar = getClassesInJar(newJar);
 
         for (Class originalClass : classesInOriginalJar) {
+            if (isExcluded(originalClass)) {
+                continue;
+            }
             if (Modifier.isPublic(originalClass.getModifiers())) {
                 Optional<Class> classInNewJar = classesInNewJar.stream().filter(c -> c.getName().equals(originalClass.getName())).findFirst();
                 if (classInNewJar.isEmpty()) {
@@ -97,6 +102,16 @@ public class SemVerChecker {
         }
 
         return result;
+    }
+
+    private boolean isExcluded(Class originalClass) {
+        for (String excludePackage : configuration.getExcludePackages()) {
+            if (originalClass.getPackage().getName().startsWith(excludePackage)) {
+                log.debug("Class {} is skipped as it is excluded from the check as it in excluded package {}", originalClass.getName(), excludePackage);
+                return true;
+            }
+        }
+        return false;
     }
 
     private SemVerType determineClassDifference(Class originalClass, Class classInNewJar) {
