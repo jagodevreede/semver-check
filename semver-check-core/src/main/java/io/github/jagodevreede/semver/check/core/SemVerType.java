@@ -1,5 +1,7 @@
 package io.github.jagodevreede.semver.check.core;
 
+import java.util.Locale;
+
 /**
  * This is an enum that represents the different types of version updates that can be made to a software project,
  * according to the semantic versioning (SemVer) specification.
@@ -35,5 +37,9 @@ public enum SemVerType {
             return was;
         }
         return toBe;
+    }
+
+    public String toLowerCaseString() {
+        return toString().toLowerCase(Locale.ROOT);
     }
 }

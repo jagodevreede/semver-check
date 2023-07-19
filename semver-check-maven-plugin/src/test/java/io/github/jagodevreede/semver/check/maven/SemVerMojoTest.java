@@ -66,16 +66,16 @@ class SemVerMojoTest {
     @CsvSource({
             "0.1.7, 1.0.0, 1.0.0",
             "1.1.7, 1.0.0, 1.1.7",
-            "1.1.7, 1.1.7, 1.1.7"
+            "1.1.7, 1.1.7, 1.1.7",
     })
-    void compairWithParentShouldGiveCorrectResult(String currentProjectVersion, String versionOfParent, String excepted) throws MojoExecutionException {
+    void compareWithParentShouldGiveCorrectResult(String currentProjectVersion, String versionOfParent, String excepted) throws MojoExecutionException {
         when(project.getBuild().getDirectory()).thenReturn(new File("target/").getAbsolutePath());
         subject.outputFileName = "parent";
         subject.writeFile(project, versionOfParent);
 
         doNothing().when(subject).writeFile(any(), stringCaptor.capture());
 
-        subject.updateParent(currentProjectVersion, project);
+        subject.updateParentOutputFile(currentProjectVersion, project);
 
         assertThat(stringCaptor.getValue()).isEqualTo(excepted);
     }
@@ -85,12 +85,64 @@ class SemVerMojoTest {
             "1.2.3, MAJOR, 2.0.0",
             "1.2.3, MINOR, 1.3.0",
             "1.2.3, PATCH, 1.2.4",
-            "1.2.3, NONE, 1.2.3"
+            "1.2.3, NONE, 1.2.3",
     })
-    public void testGetNextVersion(String version, SemVerType semVerType, String expected) {
+    void testGetNextVersion(String version, SemVerType semVerType, String expected) {
         ArtifactVersion artifactVersion = new DefaultArtifactVersion(version);
         String actual = subject.getNextVersion(artifactVersion, semVerType);
         assertThat(actual).isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "1.2.3, 2.0.0, MAJOR",
+            "1.2.3, 1.3.0, MINOR",
+            "1.2.3, 1.2.4, PATCH",
+            "1.2.3, 1.2.3, NONE",
+            // current version is lower than released version
+            "1.2.3, 1.2.2, NONE",
+            "1.5.3, 1.2.2, NONE",
+            "2.5.3, 1.2.2, NONE",
+    })
+    void getCurrentSemVerType(String oldVersion, String currentVersion, SemVerType expected) {
+        ArtifactVersion oldVersionArtifactVersion = new DefaultArtifactVersion(oldVersion);
+        ArtifactVersion currentVersionArtifactVersion = new DefaultArtifactVersion(currentVersion);
+        SemVerType actual = subject.getCurrentSemVerType(oldVersionArtifactVersion, currentVersionArtifactVersion);
+        assertThat(actual).isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "MAJOR, PATCH, false",
+            "MAJOR, MINOR, false",
+            "PATCH, NONE, false",
+            "NONE, MAJOR, false",
+            "NONE, PATCH, false",
+    })
+    void failOnIncorrectVersion_shouldBreakTheBuild(SemVerType detected, SemVerType current, boolean allowHigherVersions) {
+        subject.failOnIncorrectVersion = true;
+        subject.allowHigherVersions = allowHigherVersions;
+        assertThatThrownBy(() -> {
+            subject.failOnIncorrectVersion(detected, current);
+        }).isInstanceOf(MojoExecutionException.class);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "MAJOR, MAJOR, false",
+            "MINOR, MINOR, false",
+            "PATCH, PATCH, false",
+            "MAJOR, MAJOR, true",
+            "PATCH, MINOR, true",
+            "PATCH, MAJOR, true",
+            "MINOR, MAJOR, true",
+            "NONE, MAJOR, true",
+            "NONE, PATCH, true",
+    })
+    void failOnIncorrectVersion_shouldNotBreakTheBuildIfCorrect(SemVerType detected, SemVerType current, boolean allowHigherVersions) throws MojoExecutionException {
+        subject.failOnIncorrectVersion = true;
+        subject.allowHigherVersions = allowHigherVersions;
+        subject.failOnIncorrectVersion(detected, current);
     }
 
 }

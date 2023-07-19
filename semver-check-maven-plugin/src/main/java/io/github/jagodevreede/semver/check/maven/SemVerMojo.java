@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -45,6 +44,12 @@ public class SemVerMojo extends AbstractMojo {
 
     @Parameter(property = "haltOnFailure", defaultValue = "true")
     boolean haltOnFailure;
+
+    @Parameter(property = "failOnIncorrectVersion", defaultValue = "false")
+    boolean failOnIncorrectVersion;
+
+    @Parameter(property = "allowHigherVersions", defaultValue = "true")
+    boolean allowHigherVersions;
 
     @Parameter(property = "outputFileName", defaultValue = "nextVersion.txt")
     String outputFileName;
@@ -117,13 +122,41 @@ public class SemVerMojo extends AbstractMojo {
             }
         }
         String nextVersion = getNextVersion(artifactVersion, semVerType);
-        getLog().info("Determined SemVer type as: " +
-                semVerType.toString().toLowerCase(Locale.ROOT) +
+        SemVerType currentSemVerType = getCurrentSemVerType(artifactVersion, new DefaultArtifactVersion(artifact.getVersion()));
+        getLog().info("Determined SemVer type as " + semVerType.toLowerCaseString() + " and is currently " + currentSemVerType.toLowerCaseString() +
                 ", next version should be: " + nextVersion);
+        failOnIncorrectVersion(semVerType, currentSemVerType);
+        writeOutputFile(nextVersion);
+    }
+
+    void failOnIncorrectVersion(SemVerType expectedSemVerType, SemVerType currentSemVerType) throws MojoExecutionException {
+        if (failOnIncorrectVersion) {
+            if (expectedSemVerType.ordinal() < currentSemVerType.ordinal()) {
+                    throw new MojoExecutionException("Determined SemVer type as " + expectedSemVerType.toLowerCaseString() + " and is currently " + currentSemVerType.toLowerCaseString());
+            }
+            if (expectedSemVerType.ordinal() > currentSemVerType.ordinal() && !allowHigherVersions) {
+                throw new MojoExecutionException("Determined SemVer type as " + expectedSemVerType.toLowerCaseString() + " and is currently " + currentSemVerType.toLowerCaseString());
+            }
+        }
+    }
+
+    SemVerType getCurrentSemVerType(ArtifactVersion oldVersion, ArtifactVersion currentVersion) {
+        SemVerType currentSemVerType = SemVerType.NONE;
+        if (oldVersion.getMajorVersion() < currentVersion.getMajorVersion()) {
+            currentSemVerType = SemVerType.MAJOR;
+        } else if (oldVersion.getMinorVersion() < currentVersion.getMinorVersion()) {
+            currentSemVerType = SemVerType.MINOR;
+        } else if (oldVersion.getIncrementalVersion() < currentVersion.getIncrementalVersion()) {
+            currentSemVerType = SemVerType.PATCH;
+        }
+        return currentSemVerType;
+    }
+
+    private void writeOutputFile(String nextVersion) throws MojoExecutionException {
         if (outputFileName != null) {
             writeFile(project, nextVersion);
             if (project.getParent() != null) {
-                updateParent(nextVersion, project.getParent());
+                updateParentOutputFile(nextVersion, project.getParent());
             }
         }
     }
@@ -147,7 +180,7 @@ public class SemVerMojo extends AbstractMojo {
     }
 
     // Visible for testing
-    void updateParent(String nextVersion, MavenProject mavenProject) throws MojoExecutionException {
+    void updateParentOutputFile(String nextVersion, MavenProject mavenProject) throws MojoExecutionException {
         String combinedNextVersion = nextVersion;
         ArtifactVersion nextArtifactVersion = new DefaultArtifactVersion(nextVersion);
         File outputFileOfProject = new File(mavenProject.getBuild().getDirectory(), outputFileName);

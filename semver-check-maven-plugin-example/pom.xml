@@ -55,6 +55,8 @@
                     <!-- Same as:
                     <excludePackages>com.something,io.something.else</excludePackages>
                     -->
+                    <failOnIncorrectVersion>true</failOnIncorrectVersion>
+                    <allowHigherVersions>true</allowHigherVersions>
                 </configuration>
                 <executions>
                     <execution>
