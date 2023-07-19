@@ -33,7 +33,7 @@ jobs:
         uses: actions-js/push@master
         with:
           github_token: ${{ secrets.JRELEASER_GITHUB_TOKEN }}
-          message: Releasing version ${{ github.event.inputs.version }}
+          message: "build: Releasing version ${{ github.event.inputs.version }}"
 
       - name: Stage release
         run: mvn --no-transfer-progress --batch-mode -Ppublication clean deploy -DaltDeploymentRepository=local::default::file://`pwd`/target/staging-deploy
@@ -42,7 +42,7 @@ jobs:
         uses: jreleaser/release-action@v2
         with:
           setup-java: false
-          version: 1.4.0
+          version: 1.7.0
         env:
           JRELEASER_PROJECT_VERSION: ${{ github.event.inputs.version }}
           JRELEASER_GITHUB_TOKEN: ${{ secrets.JRELEASER_GITHUB_TOKEN }}
@@ -53,14 +53,14 @@ jobs:
           JRELEASER_NEXUS2_MAVEN_CENTRAL_PASSWORD: ${{ secrets.JRELEASER_NEXUS2_MAVEN_CENTRAL_PASSWORD }}
 
       - name: Set release version
-        run: mvn --no-transfer-progress --batch-mode versions:set -DnewVersion=${{ github.event.inputs.nextVersion }}
+        run: mvn --no-transfer-progress --batch-mode versions:set -DnewVersion=${{ github.event.inputs.nextVersion }}-SNAPSHOT
 
       - name: Commit & Push changes
         uses: actions-js/push@master
         with:
           github_token: ${{ secrets.JRELEASER_GITHUB_TOKEN }}
-          message: Setting SNAPSHOT version ${{ github.event.inputs.nextVersion }}-SNAPSHOT
-          tags: true
+          message: "build: Setting SNAPSHOT version ${{ github.event.inputs.nextVersion }}-SNAPSHOT"
+          tags: false
 
       - name: JReleaser release output
         if: always()
