@@ -65,6 +65,25 @@ The following configuration options are available:
 | failOnIncorrectVersion | false             | If set to `then` then if the semver mismatches the build will fail.                                                                                                                   |
 | allowHigherVersions    | true              | Only has effect when `failOnIncorrectVersion` is set.  If allowHigherVersions set to `false` it will also break if it detected a is lower then expected version.                      |
 
+## How is the semver type determined
+
+### Major
+- Changing the java version of the compiled classes to a higher version.
+- Removal of a public class, method, field or static variable.
+- Removal of a resource file (Not implemented yet)
+- Removal of an annotation on a public API (Not implemented yet)
+
+### Minor
+- Addition of a public class, method, field or static variable.
+- Removal of an annotation on a non public API (Not implemented yet)
+
+## Patch
+- Any change that changes the byte code
+- Any change in a resource file (Not implemented yet)
+- Any change in a dependency (Not implemented yet)
+- Addition of a resource file (Not implemented yet)
+- Addition of an annotation on an method in the API (all but private methods) (Not implemented yet)
+
 ## Getting involved
 
 If you have questions, concerns, bug reports, etc, please file an issue in this repository's Issue Tracker, or better
