@@ -51,6 +51,7 @@ public class TestDataGenerator {
             Path pathInZipfile = zipfs.getPath("/" + className + ".class");
 
             Files.copy(externalTxtFile, pathInZipfile, StandardCopyOption.REPLACE_EXISTING);
+            Files.delete(externalTxtFile);
         }
     }
 

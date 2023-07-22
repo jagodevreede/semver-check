@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -139,18 +140,63 @@ public class SemVerChecker {
     }
 
     private <M extends Member> SemVerType getSemVerType(Class originalClass, M[] originalClassMembers, M[] inNewJarMembers) {
+        SemVerType maxChange = NONE;
         for (M originalClassMember : originalClassMembers) {
             M memberInNew = getMemberInOther(originalClassMember, inNewJarMembers);
             if (memberInNew == null) {
                 log.info("{} '{}' no longer exists in {}", originalClassMember.getClass().getSimpleName(), originalClassMember, originalClass.getName());
                 return MAJOR;
+            } else if (originalClassMember instanceof Executable) {
+                if (originalClassMember instanceof Executable) {
+                    Annotation[] annotationsInNew = ((Executable) memberInNew).getAnnotations();
+                    Annotation[] annotationsInOriginal = ((Executable) originalClassMember).getAnnotations();
+                    SemVerType annotationSemVerType = getSemVerType(originalClassMember, annotationsInNew, annotationsInOriginal);
+                    maxChange = SemVerType.updateResult(maxChange, annotationSemVerType);
+                } else {
+                    log.info("Member {} is no longer executable", originalClassMember.getName());
+                    return MAJOR;
+                }
             }
+        }
+
+        if (maxChange != NONE) {
+            return maxChange;
         }
 
         for (M memberInNew : inNewJarMembers) {
             M originalClassMember = getMemberInOther(memberInNew, originalClassMembers);
             if (originalClassMember == null) {
                 log.info("{} '{}' in {} is new", memberInNew.getClass().getSimpleName(), memberInNew, originalClass.getName());
+                return MINOR;
+            }
+        }
+        return NONE;
+    }
+
+    private static SemVerType getSemVerType(Member originalClassMember, Annotation[] annotationsInNew, Annotation[] annotationsInOriginal) {
+        for (Annotation annotationInOriginal : annotationsInOriginal) {
+            boolean foundInNew = false;
+            for (Annotation annotationInNew : annotationsInNew) {
+                if (annotationInOriginal.toString().equals(annotationInNew.toString())) {
+                    foundInNew = true;
+                    break;
+                }
+            }
+            if (!foundInNew) {
+                log.info("Annotation {} is not available on {}", annotationInOriginal.toString(), originalClassMember);
+                return MAJOR;
+            }
+        }
+        for (Annotation annotationInNew : annotationsInNew) {
+            boolean foundInOriginal = false;
+            for (Annotation annotationInOriginal : annotationsInOriginal) {
+                if (annotationInOriginal.toString().equals(annotationInNew.toString())) {
+                    foundInOriginal = true;
+                    break;
+                }
+            }
+            if (!foundInOriginal) {
+                log.info("Annotation {} is has been added on {}", annotationInNew.toString(), originalClassMember);
                 return MINOR;
             }
         }

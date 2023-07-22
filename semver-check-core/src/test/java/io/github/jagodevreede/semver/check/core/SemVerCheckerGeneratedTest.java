@@ -39,7 +39,48 @@ class SemVerCheckerGeneratedTest {
     }
 
     @Nested
-    class emptyClassInOriginal {
+    class classAInOriginalWithPublicApi {
+        @BeforeEach
+        void createScenarioForOriginalJar() throws IOException {
+            var gen = new TestDataGenerator("ClassA");
+            gen.add("public void somethingYouShouldSee() {}");
+            gen.compileClass();
+            gen.addToJar(jarAsOriginal);
+        }
+
+        @Test
+        void addedAnnotationToMethod() throws Exception {
+            var gen = new TestDataGenerator("ClassA");
+            gen.add("@Deprecated");
+            gen.add("public void somethingYouShouldSee() {}");
+            gen.compileClass();
+            gen.addToJar(jarAsChanged);
+
+            check(MINOR);
+        }
+
+        @Test
+        void removedAnnotationFromMethod() throws Exception {
+            var gen = new TestDataGenerator("ClassA");
+            gen.add("@Deprecated");
+            gen.add("public void somethingYouShouldSee() {}");
+            gen.compileClass();
+            gen.addToJar(jarAsChanged);
+
+            checkReversed(MAJOR);
+        }
+    }
+
+    @Nested
+    class emptyClassAInOriginal {
+        @BeforeEach
+        void createScenarioOriginalJar() throws IOException {
+            var gen = new TestDataGenerator("ClassA");
+            gen.add("private void somethingYouShouldNotSee() {}");
+            gen.compileClass();
+            gen.addToJar(jarAsOriginal);
+        }
+        
         @Test
         void classNotInChanged() throws Exception {
             check(MAJOR);
@@ -76,7 +117,7 @@ class SemVerCheckerGeneratedTest {
         }
 
         @Test
-        void addedContractorWithParam() throws Exception {
+        void addedConstructorWithParam() throws Exception {
             var gen = new TestDataGenerator("ClassA");
             gen.add("public ClassA(int i) {}");
             gen.compileClass();
@@ -86,29 +127,53 @@ class SemVerCheckerGeneratedTest {
         }
 
         @Test
-        void addedContractorWithParaAndDefault() throws Exception {
+        void addedConstructorWithParamAndDefault() throws Exception {
             var gen = new TestDataGenerator("ClassA");
             gen.add("public ClassA() {}");
             gen.add("public ClassA(int i) {}");
             gen.compileClass();
             gen.addToJar(jarAsChanged);
 
-            check(MINOR);
+            checkAndReversed(MINOR, MAJOR);
         }
 
-        @BeforeEach
-        void createScenario1OriginalJar() throws IOException {
+        @Test
+        void addedManualConstructor() throws Exception {
             var gen = new TestDataGenerator("ClassA");
-            gen.add("private void somethingYouShouldNotSee() {}");
+            gen.add("public ClassA() {super();}");
             gen.compileClass();
-            gen.addToJar(jarAsOriginal);
+            gen.addToJar(jarAsChanged);
+
+            checkAndReversed(PATCH, PATCH); // byte code is different
+        }
+
+        @Test
+        void addedManualConstructorWithAnnotation() throws Exception {
+            var gen = new TestDataGenerator("ClassA");
+            gen.add("@Deprecated");
+            gen.add("public ClassA() {super();}");
+            gen.compileClass();
+            gen.addToJar(jarAsChanged);
+
+            checkAndReversed(MINOR, MAJOR); // byte code is different
         }
     }
 
     private void check(SemVerType verResult) throws IOException {
         final SemVerChecker subject = new SemVerChecker(jarAsOriginal, jarAsChanged, emptyConfiguration);
         var result = subject.determineSemVerType();
-        assertThat(result).isEqualTo(verResult);
+        assertThat(result).as("result").isEqualTo(verResult);
+    }
+
+    private void checkReversed(SemVerType verResult) throws IOException {
+        final SemVerChecker subject = new SemVerChecker(jarAsChanged, jarAsOriginal, emptyConfiguration);
+        var result = subject.determineSemVerType();
+        assertThat(result).as("Reversed result").isEqualTo(verResult);
+    }
+
+    private void checkAndReversed(SemVerType verResult, SemVerType reversedResult) throws IOException {
+        check(verResult);
+        checkReversed(reversedResult);
     }
 
 }

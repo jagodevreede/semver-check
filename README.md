@@ -71,11 +71,11 @@ The following configuration options are available:
 - Changing the java version of the compiled classes to a higher version.
 - Removal of a public class, method, field or static variable.
 - Removal of a resource file (Not implemented yet)
-- Removal of an annotation on a public API (Not implemented yet)
+- Removal of an annotation on a public API
 
 ### Minor
 - Addition of a public class, method, field or static variable.
-- Removal of an annotation on a non public API (Not implemented yet)
+- Removal of an annotation on a non public API
 
 ## Patch
 - Any change that changes the byte code
