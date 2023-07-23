@@ -11,10 +11,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class SemVerCheckerSimpleTest {
 
+    private static final List<String> DEFAULT_EXCLUDED_FILES = List.of("META-INF/maven/");
     private final File baseJar;
     private final File additionJar;
     private final File changedJavaVersionJar;
-    private final Configuration emptyConfiguration = new Configuration(List.of());
+    private final Configuration emptyConfiguration = new Configuration(List.of(), DEFAULT_EXCLUDED_FILES);
 
     SemVerCheckerSimpleTest() {
         baseJar = new File("../sample/sample-base/target/semver-check-sample-base-1.0.0-SNAPSHOT.jar");
@@ -45,7 +46,7 @@ class SemVerCheckerSimpleTest {
     })
     @ParameterizedTest
     void determineSemVerType_additionIsNoneIfPackageExcluded(String excludedPackage) throws Exception {
-        Configuration configuration = new Configuration(List.of("com.acme", excludedPackage));
+        Configuration configuration = new Configuration(List.of("com.acme", excludedPackage), DEFAULT_EXCLUDED_FILES);
         final SemVerChecker subject = new SemVerChecker(baseJar, additionJar, configuration);
         var result = subject.determineSemVerType();
 
@@ -67,7 +68,7 @@ class SemVerCheckerSimpleTest {
     })
     @ParameterizedTest
     void determineSemVerType_removalOfMethodIsNoneIfPackageExcluded(String excludedPackage) throws Exception {
-        Configuration configuration = new Configuration(List.of("com.acme", excludedPackage));
+        Configuration configuration = new Configuration(List.of("com.acme", excludedPackage), DEFAULT_EXCLUDED_FILES);
         final SemVerChecker subject = new SemVerChecker(additionJar, baseJar, configuration);
         var result = subject.determineSemVerType();
 

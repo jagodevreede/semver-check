@@ -54,8 +54,11 @@ public class SemVerMojo extends AbstractMojo {
     @Parameter(property = "outputFileName", defaultValue = "nextVersion.txt")
     String outputFileName;
 
-    @Parameter(property = "excludePackages", required = true)
+    @Parameter(property = "excludePackages")
     String[] excludePackages;
+
+    @Parameter(property = "excludeFiles")
+    String[] excludeFiles;
 
     // Yes use the deprecated class as the new version is not injected?
     private final ArtifactMetadataSource artifactMetadataSource;
@@ -116,7 +119,7 @@ public class SemVerMojo extends AbstractMojo {
                 getLog().warn("Artifact " + artifactVersion + " has no attached file?");
             } else {
                 getLog().info("Checking SemVer against last known version " + artifactVersion);
-                Configuration configuration = new Configuration(getExcludePackages());
+                Configuration configuration = new Configuration(getExcludePackages(), getExcludeFiles());
                 SemVerChecker semVerChecker = new SemVerChecker(workingFile, file, configuration);
                 semVerType = semVerChecker.determineSemVerType();
             }
@@ -166,6 +169,13 @@ public class SemVerMojo extends AbstractMojo {
             return List.of();
         }
         return Arrays.asList(excludePackages);
+    }
+
+    private List<String> getExcludeFiles() {
+        if (excludeFiles == null) {
+            return List.of();
+        }
+        return Arrays.asList(excludeFiles);
     }
 
     // Visible for testing

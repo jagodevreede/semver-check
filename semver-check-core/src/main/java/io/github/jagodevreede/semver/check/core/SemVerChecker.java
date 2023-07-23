@@ -117,6 +117,9 @@ public class SemVerChecker {
         Map<String, JarEntry> filesInNewJar = getFilesNotClassedInJar(newJar);
 
         for (Map.Entry<String, JarEntry> fileInOriginal : filesInOriginalJar.entrySet()) {
+            if (isFileExcluded(fileInOriginal.getKey())) {
+                continue;
+            }
             JarEntry fileInNewJar = filesInNewJar.get(fileInOriginal.getKey());
             if (fileInNewJar == null) {
                 log.debug("File {} is removed", fileInOriginal.getKey());
@@ -129,6 +132,9 @@ public class SemVerChecker {
         }
 
         for (Map.Entry<String, JarEntry> fileInNewJar : filesInNewJar.entrySet()) {
+            if (isFileExcluded(fileInNewJar.getKey())) {
+                continue;
+            }
             JarEntry fileInOriginal = filesInOriginalJar.get(fileInNewJar.getKey());
             if (fileInOriginal == null) {
                 log.debug("File {} is added", fileInNewJar.getKey());
@@ -136,6 +142,16 @@ public class SemVerChecker {
             }
         }
         return NONE;
+    }
+
+    private boolean isFileExcluded(String key) {
+        for (String excludeFile : configuration.getExcludeFiles()) {
+            if (key.startsWith(excludeFile)) {
+                log.debug("File {} is skipped as it is excluded from the check as it in excluded files {}", key, excludeFile);
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isExcluded(Class originalClass) {

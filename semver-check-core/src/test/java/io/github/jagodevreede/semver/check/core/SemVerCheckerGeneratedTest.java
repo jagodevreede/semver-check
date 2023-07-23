@@ -19,7 +19,7 @@ class SemVerCheckerGeneratedTest {
     private final File baseJar;
     private final File jarAsOriginal = new File("target/original.jar");
     private final File jarAsChanged = new File("target/changed.jar");
-    private final Configuration emptyConfiguration = new Configuration(List.of());
+    private final Configuration emptyConfiguration = new Configuration(List.of(), List.of());
 
     SemVerCheckerGeneratedTest() {
         baseJar = new File("../sample/sample-base/target/semver-check-sample-base-1.0.0-SNAPSHOT.jar");

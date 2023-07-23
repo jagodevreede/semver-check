@@ -55,6 +55,13 @@
                     <!-- Same as:
                     <excludePackages>com.something,io.something.else</excludePackages>
                     -->
+                    <excludeFiles>
+                        <excludeFile>META-INF/maven/</excludeFile>
+                        <excludeFile>some/other/folder/</excludeFile>
+                    </excludeFiles>
+                    <!-- Same as:
+                   <excludeFiles>META-INF/maven/,some/other/folder/</excludeFiles>
+                   -->
                     <failOnIncorrectVersion>true</failOnIncorrectVersion>
                     <allowHigherVersions>true</allowHigherVersions>
                 </configuration>
