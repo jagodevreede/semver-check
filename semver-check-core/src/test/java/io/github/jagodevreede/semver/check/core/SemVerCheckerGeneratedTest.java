@@ -45,7 +45,7 @@ class SemVerCheckerGeneratedTest {
             var gen = new TestDataGenerator("ClassA");
             gen.add("public void somethingYouShouldSee() {}");
             gen.compileClass();
-            gen.addToJar(jarAsOriginal);
+            gen.addClassToJar(jarAsOriginal);
         }
 
         @Test
@@ -54,7 +54,7 @@ class SemVerCheckerGeneratedTest {
             gen.add("@Deprecated");
             gen.add("public void somethingYouShouldSee() {}");
             gen.compileClass();
-            gen.addToJar(jarAsChanged);
+            gen.addClassToJar(jarAsChanged);
 
             check(MINOR);
         }
@@ -65,7 +65,7 @@ class SemVerCheckerGeneratedTest {
             gen.add("@Deprecated");
             gen.add("public void somethingYouShouldSee() {}");
             gen.compileClass();
-            gen.addToJar(jarAsChanged);
+            gen.addClassToJar(jarAsChanged);
 
             checkReversed(MAJOR);
         }
@@ -78,7 +78,7 @@ class SemVerCheckerGeneratedTest {
             var gen = new TestDataGenerator("ClassA");
             gen.add("private void somethingYouShouldNotSee() {}");
             gen.compileClass();
-            gen.addToJar(jarAsOriginal);
+            gen.addClassToJar(jarAsOriginal);
         }
         
         @Test
@@ -91,7 +91,7 @@ class SemVerCheckerGeneratedTest {
             var gen = new TestDataGenerator("ClassA");
             gen.add("private void somethingElseYouShouldNotSee() {}");
             gen.compileClass();
-            gen.addToJar(jarAsChanged);
+            gen.addClassToJar(jarAsChanged);
 
             check(PATCH);
         }
@@ -101,7 +101,7 @@ class SemVerCheckerGeneratedTest {
             var gen = new TestDataGenerator("ClassA");
             gen.add("public void somethingPublic() {}");
             gen.compileClass();
-            gen.addToJar(jarAsChanged);
+            gen.addClassToJar(jarAsChanged);
 
             check(MINOR);
         }
@@ -111,7 +111,7 @@ class SemVerCheckerGeneratedTest {
             var gen = new TestDataGenerator("ClassA");
             gen.add("public static final String SOMETHING = \"something\";");
             gen.compileClass();
-            gen.addToJar(jarAsChanged);
+            gen.addClassToJar(jarAsChanged);
 
             check(MINOR);
         }
@@ -121,7 +121,7 @@ class SemVerCheckerGeneratedTest {
             var gen = new TestDataGenerator("ClassA");
             gen.add("public ClassA(int i) {}");
             gen.compileClass();
-            gen.addToJar(jarAsChanged);
+            gen.addClassToJar(jarAsChanged);
 
             check(MAJOR);
         }
@@ -132,7 +132,7 @@ class SemVerCheckerGeneratedTest {
             gen.add("public ClassA() {}");
             gen.add("public ClassA(int i) {}");
             gen.compileClass();
-            gen.addToJar(jarAsChanged);
+            gen.addClassToJar(jarAsChanged);
 
             checkAndReversed(MINOR, MAJOR);
         }
@@ -142,7 +142,7 @@ class SemVerCheckerGeneratedTest {
             var gen = new TestDataGenerator("ClassA");
             gen.add("public ClassA() {super();}");
             gen.compileClass();
-            gen.addToJar(jarAsChanged);
+            gen.addClassToJar(jarAsChanged);
 
             checkAndReversed(PATCH, PATCH); // byte code is different
         }
@@ -153,9 +153,34 @@ class SemVerCheckerGeneratedTest {
             gen.add("@Deprecated");
             gen.add("public ClassA() {super();}");
             gen.compileClass();
-            gen.addToJar(jarAsChanged);
+            gen.addClassToJar(jarAsChanged);
 
             checkAndReversed(MINOR, MAJOR); // byte code is different
+        }
+    }
+
+    @Nested
+    class resourceFile {
+        @Test
+        void addedFile() throws Exception {
+            var gen = new TestDataGenerator("resource");
+            gen.add("Some text");
+            gen.writeFile(".txt");
+            gen.addFileToJar(jarAsChanged, ".txt");
+
+            checkAndReversed(PATCH, MAJOR);
+        }
+
+        @Test
+        void changeFile() throws Exception {
+            var gen = new TestDataGenerator("resource");
+            gen.add("Some text");
+            gen.writeFile(".txt");
+            gen.addFileToJar(jarAsChanged, ".txt");
+            gen.writeFile(".txt");
+            gen.addFileToJar(jarAsOriginal, ".txt");
+
+            checkAndReversed(PATCH, PATCH);
         }
     }
 

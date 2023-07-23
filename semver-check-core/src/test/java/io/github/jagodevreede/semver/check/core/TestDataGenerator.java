@@ -5,11 +5,9 @@ import javax.tools.JavaCompiler.CompilationTask;
 import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
 import javax.tools.ToolProvider;
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.net.URI;
+import java.nio.file.FileSystem;
 import java.nio.file.*;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -41,14 +39,24 @@ public class TestDataGenerator {
         task.call();
     }
 
-    public void addToJar(File jarFile) throws IOException {
+    public void writeFile(String extension) throws IOException {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(className + extension))) {
+            writer.write(writer.toString());
+        }
+    }
+
+    public void addClassToJar(File jarFile) throws IOException {
+        addFileToJar(jarFile, ".class");
+    }
+
+    public void addFileToJar(File jarFile, String extension) throws IOException {
         Map<String, String> env = new HashMap<>();
         env.put("create", "true");
         URI uri = URI.create("jar:file:" + jarFile.getAbsolutePath());
 
         try (FileSystem zipfs = FileSystems.newFileSystem(uri, env)) {
-            Path externalTxtFile = Paths.get(className + ".class");
-            Path pathInZipfile = zipfs.getPath("/" + className + ".class");
+            Path externalTxtFile = Paths.get(className + extension);
+            Path pathInZipfile = zipfs.getPath("/" + className + extension);
 
             Files.copy(externalTxtFile, pathInZipfile, StandardCopyOption.REPLACE_EXISTING);
             Files.delete(externalTxtFile);

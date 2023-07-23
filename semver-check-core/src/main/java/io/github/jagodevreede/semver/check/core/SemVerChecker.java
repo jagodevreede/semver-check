@@ -10,8 +10,10 @@ import java.lang.reflect.*;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
@@ -102,7 +104,38 @@ public class SemVerChecker {
             }
         }
 
+        if (result != MAJOR) {
+            SemVerType fileDifferences = determineFileDifferences();
+            result = updateResult(result, fileDifferences);
+        }
+
         return result;
+    }
+
+    private SemVerType determineFileDifferences() throws IOException {
+        Map<String, JarEntry> filesInOriginalJar = getFilesNotClassedInJar(original);
+        Map<String, JarEntry> filesInNewJar = getFilesNotClassedInJar(newJar);
+
+        for (Map.Entry<String, JarEntry> fileInOriginal : filesInOriginalJar.entrySet()) {
+            JarEntry fileInNewJar = filesInNewJar.get(fileInOriginal.getKey());
+            if (fileInNewJar == null) {
+                log.debug("File {} is removed", fileInOriginal.getKey());
+                return MAJOR;
+            }
+            if (fileInNewJar.getCrc() != fileInOriginal.getValue().getCrc()) {
+                log.debug("File {} has been changed", fileInOriginal.getKey());
+                result = updateResult(result, PATCH);
+            }
+        }
+
+        for (Map.Entry<String, JarEntry> fileInNewJar : filesInNewJar.entrySet()) {
+            JarEntry fileInOriginal = filesInOriginalJar.get(fileInNewJar.getKey());
+            if (fileInOriginal == null) {
+                log.debug("File {} is added", fileInNewJar.getKey());
+                result = updateResult(result, PATCH);
+            }
+        }
+        return NONE;
     }
 
     private boolean isExcluded(Class originalClass) {
@@ -236,6 +269,12 @@ public class SemVerChecker {
                 .map(jar -> jar.getName().replace("/", ".")
                         .replace(".class", ""))
                 .collect(Collectors.toSet());
+    }
+
+    private Map<String, JarEntry> getFilesNotClassedInJar(JarFile jarFile) throws IOException {
+        return jarFile.stream()
+                .filter(jar -> !jar.getName().endsWith(".class"))
+                .collect(Collectors.toMap(JarEntry::getName, Function.identity()));
     }
 
     private JarEntry getJarEntry(JarFile jarFile, String className) {

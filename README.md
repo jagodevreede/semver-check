@@ -70,7 +70,7 @@ The following configuration options are available:
 ### Major
 - Changing the java version of the compiled classes to a higher version.
 - Removal of a public class, method, field or static variable.
-- Removal of a resource file (Not implemented yet)
+- Removal of a resource file
 - Removal of an annotation on a public API
 
 ### Minor
@@ -79,9 +79,8 @@ The following configuration options are available:
 
 ## Patch
 - Any change that changes the byte code
-- Any change in a resource file (Not implemented yet)
+- Any change in a resource file
 - Any change in a dependency (Not implemented yet)
-- Addition of a resource file (Not implemented yet)
 - Addition of an annotation on an method in the API (all but private methods) (Not implemented yet)
 
 ## Getting involved
