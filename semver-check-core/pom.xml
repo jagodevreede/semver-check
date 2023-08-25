@@ -5,6 +5,7 @@
     <artifactId>semver-check-core</artifactId>
     <name>SemVer check Java Core</name>
     <description>Core implementation for the maven plugin that allows you to determine the next Semantic Version.</description>
+    <url>https://github.com/jagodevreede/semver-check</url>
 
     <parent>
         <artifactId>semver-check</artifactId>
