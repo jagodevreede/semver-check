@@ -43,7 +43,7 @@ class SemVerCheckerSimpleTest {
     void determineServerType_additionWithNewDependencyIsMinor() throws Exception {
         String userHome = System.getProperty("user.home");
         List<String> dependencyLocations = List.of("../sample/sample-dependency/target/classes", userHome + "/.m2/repository/com/fasterxml/jackson/core/jackson-annotations/2.15.2/jackson-annotations-2.15.2.jar");
-        File dependencyAddedJar = new File("../sample/sample-dependency/target/semver-dependency-1.0.0-SNAPSHOT.jar");
+        File dependencyAddedJar = new File("../sample/sample-dependency/target/semver-check-sample-dependency-1.0.0-SNAPSHOT.jar");
         Configuration configuration = new Configuration(List.of(), DEFAULT_EXCLUDED_FILES, dependencyLocations);
         final SemVerChecker subject = new SemVerChecker(baseJar, dependencyAddedJar, configuration);
         var result = subject.determineSemVerType();
