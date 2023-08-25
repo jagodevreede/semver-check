@@ -7,12 +7,10 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -72,15 +70,15 @@ public class SemVerChecker {
             return MAJOR;
         }
 
-        Set<Class> classesInOriginalJar = getClassesInJar(original);
-        Set<Class> classesInNewJar = getClassesInJar(newJar);
+        Set<ClassInformation> classesInOriginalJar = getClassesInJar(original);
+        Set<ClassInformation> classesInNewJar = getClassesInJar(newJar);
 
-        for (Class originalClass : classesInOriginalJar) {
+        for (ClassInformation originalClass : classesInOriginalJar) {
             if (isExcluded(originalClass)) {
                 continue;
             }
-            if (Modifier.isPublic(originalClass.getModifiers())) {
-                Optional<Class> classInNewJar = classesInNewJar.stream().filter(c -> c.getName().equals(originalClass.getName())).findFirst();
+            if (Modifier.isPublic(originalClass.getClazz().getModifiers())) {
+                Optional<ClassInformation> classInNewJar = classesInNewJar.stream().filter(c -> c.getName().equals(originalClass.getName())).findFirst();
                 if (classInNewJar.isEmpty()) {
                     log.info("Class {} is removed", originalClass.getName());
                     result = updateResult(result, MAJOR);
@@ -154,32 +152,37 @@ public class SemVerChecker {
         return false;
     }
 
-    private boolean isExcluded(Class originalClass) {
+    private boolean isExcluded(ClassInformation originalClass) {
         for (String excludePackage : configuration.getExcludePackages()) {
-            if (originalClass.getPackage().getName().startsWith(excludePackage)) {
-                log.debug("Class {} is skipped as it is excluded from the check as it in excluded package {}", originalClass.getName(), excludePackage);
+            if (originalClass.getClazz().getPackage().getName().startsWith(excludePackage)) {
+                log.debug("Class {} is skipped as it is excluded from the check as it in excluded package {}", originalClass.getClazz().getName(), excludePackage);
                 return true;
             }
         }
         return false;
     }
 
-    private SemVerType determineClassDifference(Class originalClass, Class classInNewJar) {
+    private SemVerType determineClassDifference(ClassInformation originalClass, ClassInformation classInNewJar) {
         SemVerType classResult = NONE;
-        Constructor[] originalClassConstructors = originalClass.getConstructors();
-        Constructor[] classInNewJarConstructors = classInNewJar.getConstructors();
-        SemVerType constructorResult = getSemVerType(originalClass, originalClassConstructors, classInNewJarConstructors);
-        classResult = updateResult(classResult, constructorResult);
+        try {
+            Map<Constructor, Annotation[]> originalClassConstructors = originalClass.getConstructorsAndAnnotations();
+            Map<Constructor, Annotation[]> classInNewJarConstructors = classInNewJar.getConstructorsAndAnnotations();
+            SemVerType constructorResult = getSemVerType(originalClass.getClazz(), originalClassConstructors, classInNewJarConstructors);
+            classResult = updateResult(classResult, constructorResult);
 
-        Field[] originalClassFields = originalClass.getFields();
-        Field[] inNewJarFields = classInNewJar.getFields();
-        SemVerType fieldResult = getSemVerType(originalClass, originalClassFields, inNewJarFields);
-        classResult = updateResult(classResult, fieldResult);
+            Map<Field, Annotation[]> originalClassFields = originalClass.getFieldsAndAnnotations();
+            Map<Field, Annotation[]> inNewJarFields = classInNewJar.getFieldsAndAnnotations();
+            SemVerType fieldResult = getSemVerType(originalClass.getClazz(), originalClassFields, inNewJarFields);
+            classResult = updateResult(classResult, fieldResult);
 
-        Method[] originalClassMethods = originalClass.getMethods();
-        Method[] classInNewJarMethods = classInNewJar.getMethods();
-        SemVerType methodResult = getSemVerType(originalClass, originalClassMethods, classInNewJarMethods);
-        classResult = updateResult(classResult, methodResult);
+            Map<Method, Annotation[]> originalClassMethods = originalClass.getMethodsAndAnnotations();
+            Map<Method, Annotation[]> classInNewJarMethods = classInNewJar.getMethodsAndAnnotations();
+            SemVerType methodResult = getSemVerType(originalClass.getClazz(), originalClassMethods, classInNewJarMethods);
+            classResult = updateResult(classResult, methodResult);
+        } catch (LinkageError e) {
+            log.info("Unable to determine class difference due to linkage error {}", e.getMessage());
+            return MAJOR;
+        }
 
         return classResult;
     }
@@ -188,23 +191,18 @@ public class SemVerChecker {
         return ClassVersion.getVersionNumber(jarFile);
     }
 
-    private <M extends Member> SemVerType getSemVerType(Class originalClass, M[] originalClassMembers, M[] inNewJarMembers) {
+    private <M extends AccessibleObject> SemVerType getSemVerType(Class originalClass, Map<M, Annotation[]> originalClassMembers, Map<M, Annotation[]> inNewJarMembers) {
         SemVerType maxChange = NONE;
-        for (M originalClassMember : originalClassMembers) {
+        for (M originalClassMember : originalClassMembers.keySet()) {
             M memberInNew = getMemberInOther(originalClassMember, inNewJarMembers);
             if (memberInNew == null) {
                 log.info("{} '{}' no longer exists in {}", originalClassMember.getClass().getSimpleName(), originalClassMember, originalClass.getName());
                 return MAJOR;
-            } else if (originalClassMember instanceof Executable) {
-                if (originalClassMember instanceof Executable) {
-                    Annotation[] annotationsInNew = ((Executable) memberInNew).getAnnotations();
-                    Annotation[] annotationsInOriginal = ((Executable) originalClassMember).getAnnotations();
-                    SemVerType annotationSemVerType = getSemVerType(originalClassMember, annotationsInNew, annotationsInOriginal);
-                    maxChange = SemVerType.updateResult(maxChange, annotationSemVerType);
-                } else {
-                    log.info("Member {} is no longer executable", originalClassMember.getName());
-                    return MAJOR;
-                }
+            } else {
+                Annotation[] annotationsInNew = memberInNew.getAnnotations();
+                Annotation[] annotationsInOriginal = originalClassMember.getAnnotations();
+                SemVerType annotationSemVerType = getSemVerType(originalClassMember, annotationsInNew, annotationsInOriginal);
+                maxChange = SemVerType.updateResult(maxChange, annotationSemVerType);
             }
         }
 
@@ -212,7 +210,7 @@ public class SemVerChecker {
             return maxChange;
         }
 
-        for (M memberInNew : inNewJarMembers) {
+        for (M memberInNew : inNewJarMembers.keySet()) {
             M originalClassMember = getMemberInOther(memberInNew, originalClassMembers);
             if (originalClassMember == null) {
                 log.info("{} '{}' in {} is new", memberInNew.getClass().getSimpleName(), memberInNew, originalClass.getName());
@@ -222,7 +220,7 @@ public class SemVerChecker {
         return NONE;
     }
 
-    private static SemVerType getSemVerType(Member originalClassMember, Annotation[] annotationsInNew, Annotation[] annotationsInOriginal) {
+    private static SemVerType getSemVerType(AccessibleObject originalClassMember, Annotation[] annotationsInNew, Annotation[] annotationsInOriginal) {
         for (Annotation annotationInOriginal : annotationsInOriginal) {
             boolean foundInNew = false;
             for (Annotation annotationInNew : annotationsInNew) {
@@ -252,31 +250,52 @@ public class SemVerChecker {
         return NONE;
     }
 
-    private <M extends Member> M getMemberInOther(M originalClassMethod, M[] classInNewJarMethods) {
-        for (M method : classInNewJarMethods) {
-            if (originalClassMethod.toString().equals(method.toString())) {
+    private <M extends AccessibleObject> M getMemberInOther(M originalClassMember, Map<M, Annotation[]> inNewJarMembers) {
+        for (M method : inNewJarMembers.keySet()) {
+            if (originalClassMember.toString().equals(method.toString())) {
                 return method;
             }
         }
         return null;
     }
 
-    private Set<Class> getClassesInJar(JarFile jarFile) throws IOException {
+    private Set<ClassInformation> getClassesInJar(JarFile jarFile) throws IOException {
+        List<URL> jarsInRuntime = new ArrayList<>(configuration.getRuntimeClasspathElements()
+                .stream()
+                .filter(jar -> jar.endsWith(".jar"))
+                .map(s -> {
+                    try {
+                        return new URL("jar:file:" + s + "!/");
+                    } catch (MalformedURLException e) {
+                        return null;
+                    }
+                })
+                .collect(Collectors.toList()));
+        jarsInRuntime.add(new URL("jar:file:" + jarFile.getName() + "!/"));
         Set<String> classNames = getClassNamesFromJarFile(jarFile);
-        Set<Class> classes = new HashSet<>(classNames.size());
-        try (URLClassLoader cl = URLClassLoader.newInstance(
-                new URL[]{new URL("jar:file:" + jarFile.getName() + "!/")})) {
+        Set<ClassInformation> classes = new HashSet<>(classNames.size());
+        try (URLClassLoader cl = URLClassLoader.newInstance(jarsInRuntime.toArray(new URL[0]))) {
             for (String name : classNames) {
-                Class clazz = null; // Load the class by its name
                 try {
-                    clazz = cl.loadClass(name);
-                } catch (ClassNotFoundException e) {
-                    log.warn("Failed to load class {} from {}", name, jarFile);
+                    Class aClass = cl.loadClass(name);
+                    Map<Constructor, Annotation[]> constructorsAndAnnotations = getAnnotationMapFromAccessibleObject(aClass.getConstructors());
+                    Map<Method, Annotation[]> fieldsAndAnnotations = getAnnotationMapFromAccessibleObject(aClass.getMethods());
+                    Map<Field, Annotation[]> methodsAndAnnotations = getAnnotationMapFromAccessibleObject(aClass.getFields());
+                    classes.add(new ClassInformation(aClass, constructorsAndAnnotations, methodsAndAnnotations, fieldsAndAnnotations));
+                } catch (ReflectiveOperationException | LinkageError e) {
+                    log.warn("Failed to load class {} from {} due to: {} {}", name, jarFile.getName(), e.getClass().getName(), e.getMessage());
                 }
-                classes.add(clazz);
             }
         }
         return classes;
+    }
+
+    private <T extends AccessibleObject> Map<T, Annotation[]> getAnnotationMapFromAccessibleObject(T[] AccessibleObjects) {
+        Map<T, Annotation[]> tHashMap = new HashMap<>();
+        for (T a : AccessibleObjects) {
+            tHashMap.put(a, a.getAnnotations());
+        }
+        return tHashMap;
     }
 
     private Set<String> getClassNamesFromJarFile(JarFile jarFile) {

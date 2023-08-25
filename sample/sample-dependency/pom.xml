@@ -2,22 +2,23 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+    <artifactId>semver-dependency</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <name>SemVer check Sample dependency</name>
+
     <parent>
-        <artifactId>semver-check</artifactId>
+        <artifactId>semver-check-sample</artifactId>
         <groupId>io.github.jagodevreede</groupId>
         <version>0.1.1-SNAPSHOT</version>
     </parent>
-    <artifactId>semver-check-sample</artifactId>
-    <packaging>pom</packaging>
-    <name>SemVer check sample root</name>
 
-    <modules>
-        <module>sample-base</module>
-        <module>sample-addition</module>
-        <module>sample-empty</module>
-        <module>sample-java-version</module>
-        <module>sample-dependency</module>
-    </modules>
+    <dependencies>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>2.15.2</version>
+        </dependency>
+    </dependencies>
 
     <build>
         <plugins>
