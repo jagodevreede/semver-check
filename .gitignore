@@ -6,3 +6,5 @@ out/
 *.jar
 *.versionsBackup
 *.log
+*.iml
+JRELEASER_VERSION

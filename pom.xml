@@ -49,6 +49,8 @@
         <module>semver-check-core</module>
         <module>semver-check-maven-plugin</module>
         <module>sample</module>
+        <module>semver-check-maven-plugin-example</module>
+        <module>semver-check-maven-plugin-multi-module-example</module>
     </modules>
 
     <distributionManagement>
