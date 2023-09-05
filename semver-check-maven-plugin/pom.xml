@@ -33,11 +33,6 @@
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
             <version>${junit.version}</version>
             <scope>test</scope>
@@ -97,7 +92,6 @@
                 <artifactId>maven-plugin-plugin</artifactId>
                 <version>3.7.0</version>
                 <configuration>
-                    <!-- <goalPrefix>maven-archetype-plugin</goalPrefix> -->
                     <skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
                 </configuration>
                 <executions>

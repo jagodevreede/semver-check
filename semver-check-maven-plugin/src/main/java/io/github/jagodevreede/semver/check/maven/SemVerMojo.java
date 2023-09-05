@@ -6,13 +6,12 @@ import io.github.jagodevreede.semver.check.core.SemVerType;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
-import org.apache.maven.artifact.metadata.ArtifactMetadataRetrievalException;
-import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactResolutionRequest;
 import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -21,6 +20,9 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.repository.RepositorySystem;
+import org.eclipse.aether.resolution.VersionRangeRequest;
+import org.eclipse.aether.resolution.VersionRangeResolutionException;
+import org.eclipse.aether.version.Version;
 
 import javax.inject.Inject;
 import java.io.File;
@@ -32,6 +34,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.maven.RepositoryUtils.toArtifact;
 
 @Mojo(name = "check", defaultPhase = LifecyclePhase.VERIFY, threadSafe = true, requiresDependencyResolution = ResolutionScope.COMPILE)
 public class SemVerMojo extends AbstractMojo {
@@ -40,6 +43,10 @@ public class SemVerMojo extends AbstractMojo {
 
     @Parameter(property = "semver.skip", defaultValue = "false")
     boolean skip;
+
+    /**
+     *  If set to `false` then the plugin will also compare to SNAPSHOT versions if it can find any (in local repo's for example)
+     */
     @Parameter(property = "ignoreSnapshots", defaultValue = "true")
     boolean ignoreSnapshots;
 
@@ -61,9 +68,6 @@ public class SemVerMojo extends AbstractMojo {
     @Parameter(property = "excludeFiles")
     String[] excludeFiles;
 
-    // Yes use the deprecated class as the new version is not injected?
-    private final ArtifactMetadataSource artifactMetadataSource;
-
     private final RepositorySystem repoSystem;
 
     @Parameter(defaultValue = "${project.remoteArtifactRepositories}", readonly = true)
@@ -72,10 +76,15 @@ public class SemVerMojo extends AbstractMojo {
     @Parameter(defaultValue = "${localRepository}", readonly = true)
     ArtifactRepository localRepository;
 
+    @Parameter(defaultValue = "${session}", required = true, readonly = true)
+    MavenSession mavenSession;
+
+    private final org.eclipse.aether.RepositorySystem aetherRepositorySystem;
+
     @Inject
-    public SemVerMojo(ArtifactMetadataSource artifactMetadataSource, RepositorySystem repoSystem) {
-        this.artifactMetadataSource = artifactMetadataSource;
+    public SemVerMojo(RepositorySystem repoSystem, org.eclipse.aether.RepositorySystem aetherRepositorySystem) {
         this.repoSystem = repoSystem;
+        this.aetherRepositorySystem = aetherRepositorySystem;
     }
 
     public void execute() throws MojoExecutionException {
@@ -90,31 +99,32 @@ public class SemVerMojo extends AbstractMojo {
                 return;
             }
             Artifact artifact = project.getArtifact();
-            File workingFile = new File(project.getBuild().getDirectory(), project.getBuild().getFinalName() + "." + (artifact.getClassifier() != null ? artifact.getClassifier() : "jar"));
+            File workingFile = new File(project.getBuild().getDirectory(),
+                    project.getBuild().getFinalName() + "." + (artifact.getClassifier() != null ? artifact.getClassifier() : "jar"));
             getLog().debug("Using as original input file: " + workingFile);
 
             haltOnCondition(!workingFile.isFile(), "Unable to read file " + workingFile);
 
             determineVersionInformation(artifact, workingFile);
-        } catch (ArtifactMetadataRetrievalException | IOException e) {
+        } catch (VersionRangeResolutionException | IOException e) {
             throw new MojoExecutionException(e.getMessage());
         } catch (HaltException he) {
             getLog().warn(he.getMessage());
         }
     }
 
-    private void determineVersionInformation(Artifact artifact, File workingFile) throws ArtifactMetadataRetrievalException, IOException, MojoExecutionException {
+    private void determineVersionInformation(Artifact artifact, File workingFile) throws IOException, MojoExecutionException, VersionRangeResolutionException {
         if (getLog().isDebugEnabled() && excludePackages != null) {
             getLog().debug("Excluded packages are " + getExcludePackages());
         }
-        List<ArtifactVersion> artifactVersions = getArtifactVersions(artifact);
+        List<Version> artifactVersions = getArtifactVersions(artifact);
         SemVerType semVerType = SemVerType.NONE;
-        ArtifactVersion artifactVersion;
+        String artifactVersion;
         if (artifactVersions.isEmpty()) {
             getLog().info("No other versions available for " + artifact.getGroupId() + ":" + artifact.getArtifactId());
-            artifactVersion = new DefaultArtifactVersion(artifact.getVersion());
+            artifactVersion = artifact.getVersion();
         } else {
-            artifactVersion = artifactVersions.get(0);
+            artifactVersion = artifactVersions.get(artifactVersions.size() - 1).toString();
             File file = getLastVersion(artifact, artifactVersion);
             if (!file.exists()) {
                 getLog().warn("Artifact " + artifactVersion + " has no attached file?");
@@ -143,21 +153,24 @@ public class SemVerMojo extends AbstractMojo {
     void failOnIncorrectVersion(SemVerType expectedSemVerType, SemVerType currentSemVerType) throws MojoExecutionException {
         if (failOnIncorrectVersion) {
             if (expectedSemVerType.ordinal() < currentSemVerType.ordinal()) {
-                    throw new MojoExecutionException("Determined SemVer type as " + expectedSemVerType.toLowerCaseString() + " and is currently " + currentSemVerType.toLowerCaseString());
+                throw new MojoExecutionException(
+                        "Determined SemVer type as " + expectedSemVerType.toLowerCaseString() + " and is currently " + currentSemVerType.toLowerCaseString());
             }
             if (expectedSemVerType.ordinal() > currentSemVerType.ordinal() && !allowHigherVersions) {
-                throw new MojoExecutionException("Determined SemVer type as " + expectedSemVerType.toLowerCaseString() + " and is currently " + currentSemVerType.toLowerCaseString());
+                throw new MojoExecutionException(
+                        "Determined SemVer type as " + expectedSemVerType.toLowerCaseString() + " and is currently " + currentSemVerType.toLowerCaseString());
             }
         }
     }
 
-    SemVerType getCurrentSemVerType(ArtifactVersion oldVersion, ArtifactVersion currentVersion) {
+    SemVerType getCurrentSemVerType(String oldVersion, ArtifactVersion currentVersion) {
+        ArtifactVersion oldArtifactVersion = new DefaultArtifactVersion(oldVersion);
         SemVerType currentSemVerType = SemVerType.NONE;
-        if (oldVersion.getMajorVersion() < currentVersion.getMajorVersion()) {
+        if (oldArtifactVersion.getMajorVersion() < currentVersion.getMajorVersion()) {
             currentSemVerType = SemVerType.MAJOR;
-        } else if (oldVersion.getMinorVersion() < currentVersion.getMinorVersion()) {
+        } else if (oldArtifactVersion.getMinorVersion() < currentVersion.getMinorVersion()) {
             currentSemVerType = SemVerType.MINOR;
-        } else if (oldVersion.getIncrementalVersion() < currentVersion.getIncrementalVersion()) {
+        } else if (oldArtifactVersion.getIncrementalVersion() < currentVersion.getIncrementalVersion()) {
             currentSemVerType = SemVerType.PATCH;
         }
         return currentSemVerType;
@@ -216,13 +229,13 @@ public class SemVerMojo extends AbstractMojo {
         writeFile(mavenProject, combinedNextVersion);
     }
 
-    private File getLastVersion(Artifact artifact, ArtifactVersion artifactVersion) throws MojoExecutionException {
-        getLog().debug("Using version " + artifactVersion.toString() + " to resolve");
+    private File getLastVersion(Artifact artifact, String artifactVersion) throws MojoExecutionException {
+        getLog().debug("Using version " + artifactVersion + " to resolve");
 
         Artifact aetherArtifact = new DefaultArtifact(
                 artifact.getGroupId(),
                 artifact.getArtifactId(),
-                artifactVersion.toString(),
+                artifactVersion,
                 "provided",
                 artifact.getType(),
                 artifact.getClassifier(),
@@ -244,7 +257,8 @@ public class SemVerMojo extends AbstractMojo {
     }
 
     /// Visible for testing
-    String getNextVersion(ArtifactVersion artifactVersion, SemVerType semVerType) {
+    String getNextVersion(String version, SemVerType semVerType) {
+        final ArtifactVersion artifactVersion = new DefaultArtifactVersion(version);
         String nextVersion = "?";
         switch (semVerType) {
             case MAJOR:
@@ -263,12 +277,21 @@ public class SemVerMojo extends AbstractMojo {
         return nextVersion;
     }
 
-    private List<ArtifactVersion> getArtifactVersions(Artifact artifact) throws ArtifactMetadataRetrievalException {
-        return artifactMetadataSource.retrieveAvailableVersions(artifact, localRepository, remoteArtifactRepositories)
+    private List<Version> getArtifactVersions(Artifact artifact) throws VersionRangeResolutionException {
+        getLog().info("Looking up versions of " + artifact.getGroupId() + ":" + artifact.getArtifactId());
+        return aetherRepositorySystem
+                .resolveVersionRange(
+                        mavenSession.getRepositorySession(),
+                        new VersionRangeRequest(
+                                toArtifact(artifact)
+                                        .setVersion("(,)"),
+                                mavenSession.getCurrentProject().getRemotePluginRepositories(),
+                                "lookupArtifactVersions"))
+                .getVersions()
                 .stream()
                 .filter(v -> {
                     if (ignoreSnapshots) {
-                        return !"SNAPSHOT".equals(v.getQualifier());
+                        return !v.toString().endsWith("-SNAPSHOT");
                     }
                     return true;
                 })

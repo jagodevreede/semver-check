@@ -88,8 +88,7 @@ class SemVerMojoTest {
             "1.2.3, NONE, 1.2.3",
     })
     void testGetNextVersion(String version, SemVerType semVerType, String expected) {
-        ArtifactVersion artifactVersion = new DefaultArtifactVersion(version);
-        String actual = subject.getNextVersion(artifactVersion, semVerType);
+        String actual = subject.getNextVersion(version, semVerType);
         assertThat(actual).isEqualTo(expected);
     }
 
@@ -105,9 +104,8 @@ class SemVerMojoTest {
             "2.5.3, 1.2.2, NONE",
     })
     void getCurrentSemVerType(String oldVersion, String currentVersion, SemVerType expected) {
-        ArtifactVersion oldVersionArtifactVersion = new DefaultArtifactVersion(oldVersion);
         ArtifactVersion currentVersionArtifactVersion = new DefaultArtifactVersion(currentVersion);
-        SemVerType actual = subject.getCurrentSemVerType(oldVersionArtifactVersion, currentVersionArtifactVersion);
+        SemVerType actual = subject.getCurrentSemVerType(oldVersion, currentVersionArtifactVersion);
         assertThat(actual).isEqualTo(expected);
     }
 
