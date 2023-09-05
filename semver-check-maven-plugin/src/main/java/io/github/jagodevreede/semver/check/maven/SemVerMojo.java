@@ -41,6 +41,9 @@ public class SemVerMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     MavenProject project;
 
+    /**
+     * If set to `true` then the build will skip the execution of this plugin
+     */
     @Parameter(property = "semver.skip", defaultValue = "false")
     boolean skip;
 
@@ -50,21 +53,39 @@ public class SemVerMojo extends AbstractMojo {
     @Parameter(property = "ignoreSnapshots", defaultValue = "true")
     boolean ignoreSnapshots;
 
+    /**
+     * If set to `false` then the build will not fail if the plugin encounter a problem, but only log a warning
+     */
     @Parameter(property = "haltOnFailure", defaultValue = "true")
     boolean haltOnFailure;
 
+    /**
+     * If set to `true` then if the semver mismatches the build will fail.
+     */
     @Parameter(property = "failOnIncorrectVersion", defaultValue = "false")
     boolean failOnIncorrectVersion;
 
+    /**
+     *  Only has effect when `failOnIncorrectVersion` is set.  If allowHigherVersions set to `false` it will also break if it detected a is lower then expected version.
+     */
     @Parameter(property = "allowHigherVersions", defaultValue = "true")
     boolean allowHigherVersions;
 
+    /**
+     *  The name of the file where the next version in plain text will be written to. This file is located in the `target` folder. If the property is left empty then no file will be created
+     */
     @Parameter(property = "outputFileName", defaultValue = "nextVersion.txt")
     String outputFileName;
 
+    /**
+     * Ignores packages can be a comma separated list or a list of excludePackage
+     */
     @Parameter(property = "excludePackages")
     String[] excludePackages;
 
+    /**
+     * Ignores files in that starts with given here. Can be a comma separated list or a list of excludeFile
+     */
     @Parameter(property = "excludeFiles")
     String[] excludeFiles;
 

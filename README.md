@@ -63,7 +63,7 @@ The following configuration options are available:
 | outputFileName         | `nextVersion.txt` | The name of the file where the next version in plain text will be written to. This file is located in the `target` folder. If the property is left empty then no file will be created |
 | excludePackages        |                   | Ignores packages can be a comma separated list or a list of excludePackage (See [example project](semver-check-maven-plugin-example) for example)                                     |
 | excludeFiles           |                   | Ignores files in that starts with given here. Can be a comma separated list or a list of excludeFile (See [example project](semver-check-maven-plugin-example) for example)           |
-| failOnIncorrectVersion | false             | If set to `then` then if the semver mismatches the build will fail.                                                                                                                   |
+| failOnIncorrectVersion | false             | If set to `true` then if the semver mismatches the build will fail.                                                                                                                   |
 | allowHigherVersions    | true              | Only has effect when `failOnIncorrectVersion` is set.  If allowHigherVersions set to `false` it will also break if it detected a is lower then expected version.                      |
 
 ## How is the semver type determined
