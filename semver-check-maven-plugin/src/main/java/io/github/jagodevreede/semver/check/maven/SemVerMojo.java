@@ -5,7 +5,6 @@ import io.github.jagodevreede.semver.check.core.SemVerChecker;
 import io.github.jagodevreede.semver.check.core.SemVerType;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
-import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.resolver.ArtifactResolutionRequest;
 import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
@@ -157,13 +156,9 @@ public class SemVerMojo extends AbstractMojo {
                 getLog().warn("Artifact " + artifactVersion + " has no attached file?");
             } else {
                 getLog().info("Checking SemVer against last known version " + artifactVersion);
-                List<String> runtimeClasspathElements = List.of();
-                try {
-                    runtimeClasspathElements = project.getRuntimeClasspathElements();
-                    getLog().debug("Runtime classpath elements are " + String.join(", ", runtimeClasspathElements));
-                } catch (DependencyResolutionRequiredException e) {
-                    getLog().warn(e);
-                }
+                List<String> runtimeClasspathElements = project.getArtifacts().stream().map(a -> a.getFile().getAbsolutePath()).collect(Collectors.toList());
+                getLog().debug("Runtime classpath elements are " + String.join(", ", runtimeClasspathElements));
+
                 Configuration configuration = new Configuration(getExcludePackages(), getExcludeFiles(), runtimeClasspathElements);
                 SemVerChecker semVerChecker = new SemVerChecker(workingFile, file, configuration);
                 semVerType = semVerChecker.determineSemVerType();
