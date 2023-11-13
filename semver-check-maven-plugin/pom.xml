@@ -7,10 +7,10 @@
     <parent>
         <artifactId>semver-check</artifactId>
         <groupId>io.github.jagodevreede</groupId>
-        <version>0.3.3-SNAPSHOT</version>
+        <version>0.3.3</version>
     </parent>
 
-    <version>0.3.3-SNAPSHOT</version>
+    <version>0.3.3</version>
     <packaging>maven-plugin</packaging>
     <description>This maven plugin allows you to check (or determine) the next version of your module, based on the rules of Semantic Versioning.</description>
     <url>https://github.com/jagodevreede/semver-check</url>
