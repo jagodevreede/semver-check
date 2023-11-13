@@ -78,6 +78,12 @@ public class SemVerMojo extends AbstractMojo {
     String outputFileName;
 
     /**
+     * If set to `false` then the output file will not be overwritten.
+     */
+    @Parameter(property = "overwriteOutputFile", defaultValue = "true")
+    boolean overwriteOutputFile;
+
+    /**
      * Ignores packages can be a comma separated list or a list of excludePackage
      */
     @Parameter(property = "excludePackages")
@@ -223,8 +229,12 @@ public class SemVerMojo extends AbstractMojo {
     // Visible for testing
     void writeFile(MavenProject mavenProject, String nextVersion) throws MojoExecutionException {
         File outputDirectory = new File(mavenProject.getBuild().getDirectory());
+        File fileToWrite = new File(outputDirectory, outputFileName);
+        if (!overwriteOutputFile && fileToWrite.exists()) {
+            return;
+        }
         outputDirectory.mkdirs();
-        try (FileWriter fileWriter = new FileWriter(new File(outputDirectory, outputFileName), UTF_8)) {
+        try (FileWriter fileWriter = new FileWriter(fileToWrite, UTF_8)) {
             fileWriter.append(nextVersion);
         } catch (IOException e) {
             throw new MojoExecutionException(e.getMessage(), e);

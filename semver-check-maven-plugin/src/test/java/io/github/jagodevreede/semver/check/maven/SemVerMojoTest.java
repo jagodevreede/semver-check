@@ -80,6 +80,23 @@ class SemVerMojoTest {
         assertThat(stringCaptor.getValue()).isEqualTo(excepted);
     }
 
+    @Test
+    void writeFileShouldNotOverwriteIfOverwriteFlagIsDisabled() throws MojoExecutionException {
+        File outputFolder = new File("target/");
+        subject.outputFileName = "testVersionFile.txt";
+        File outputFile = new File(outputFolder, subject.outputFileName);
+        when(project.getBuild().getDirectory()).thenReturn(outputFolder.getAbsolutePath());
+
+        subject.overwriteOutputFile = false;
+        subject.writeFile(project, "0.0.1");
+
+        assertThat(outputFile).exists();
+
+        subject.writeFile(project, "0.0.2");
+
+        assertThat(outputFile).hasContent("0.0.1");
+    }
+
     @ParameterizedTest
     @CsvSource({
             "1.2.3, MAJOR, 2.0.0",
