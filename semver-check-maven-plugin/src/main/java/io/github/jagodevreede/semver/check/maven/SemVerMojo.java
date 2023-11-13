@@ -83,6 +83,12 @@ public class SemVerMojo extends AbstractMojo {
     boolean overwriteOutputFile;
 
     /**
+     * If set to `false` then the output file will not be written if the determined version upgrade type is `none`.
+     */
+    @Parameter(property = "writeFileOnNone", defaultValue = "true")
+    boolean writeFileOnNone;
+
+    /**
      * Ignores packages can be a comma separated list or a list of excludePackage
      */
     @Parameter(property = "excludePackages")
@@ -169,6 +175,9 @@ public class SemVerMojo extends AbstractMojo {
         getLog().info("Determined SemVer type as " + semVerType.toLowerCaseString() + " and is currently " + currentSemVerType.toLowerCaseString() +
                 ", next version should be: " + nextVersion);
         failOnIncorrectVersion(semVerType, currentSemVerType);
+        if (SemVerType.NONE.equals(semVerType) && !writeFileOnNone) {
+            return;
+        }
         writeOutputFile(nextVersion);
     }
 
