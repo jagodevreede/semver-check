@@ -120,11 +120,11 @@ public class SemVerChecker {
             }
             JarEntry fileInNewJar = filesInNewJar.get(fileInOriginal.getKey());
             if (fileInNewJar == null) {
-                log.debug("File {} is removed", fileInOriginal.getKey());
+                log.info("File {} is removed", fileInOriginal.getKey());
                 return MAJOR;
             }
             if (fileInNewJar.getCrc() != fileInOriginal.getValue().getCrc()) {
-                log.debug("File {} has been changed", fileInOriginal.getKey());
+                log.info("File {} has been changed", fileInOriginal.getKey());
                 result = updateResult(result, PATCH);
             }
         }
@@ -135,7 +135,7 @@ public class SemVerChecker {
             }
             JarEntry fileInOriginal = filesInOriginalJar.get(fileInNewJar.getKey());
             if (fileInOriginal == null) {
-                log.debug("File {} is added", fileInNewJar.getKey());
+                log.info("File {} is added", fileInNewJar.getKey());
                 result = updateResult(result, PATCH);
             }
         }
@@ -306,9 +306,10 @@ public class SemVerChecker {
                 .collect(Collectors.toSet());
     }
 
-    private Map<String, JarEntry> getFilesNotClassedInJar(JarFile jarFile) throws IOException {
+    private Map<String, JarEntry> getFilesNotClassedInJar(JarFile jarFile) {
         return jarFile.stream()
-                .filter(jar -> !jar.getName().endsWith(".class"))
+                .filter(jarEntry -> !jarEntry.getName().endsWith(".class"))
+                .filter(jarEntry -> !jarEntry.getName().endsWith("META-INF/maven/"))
                 .collect(Collectors.toMap(JarEntry::getName, Function.identity()));
     }
 
