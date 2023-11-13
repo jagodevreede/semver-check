@@ -309,7 +309,7 @@ public class SemVerChecker {
     private Map<String, JarEntry> getFilesNotClassedInJar(JarFile jarFile) {
         return jarFile.stream()
                 .filter(jarEntry -> !jarEntry.getName().endsWith(".class"))
-                .filter(jarEntry -> !jarEntry.getName().endsWith("META-INF/maven/"))
+                .filter(jarEntry -> !jarEntry.getName().startsWith("META-INF/maven/"))
                 .collect(Collectors.toMap(JarEntry::getName, Function.identity()));
     }
 
