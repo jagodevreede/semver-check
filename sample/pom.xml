@@ -5,7 +5,7 @@
     <parent>
         <artifactId>semver-check</artifactId>
         <groupId>io.github.jagodevreede</groupId>
-        <version>0.4.0</version>
+        <version>0.4.1-SNAPSHOT</version>
     </parent>
     <artifactId>semver-check-sample</artifactId>
     <packaging>pom</packaging>
