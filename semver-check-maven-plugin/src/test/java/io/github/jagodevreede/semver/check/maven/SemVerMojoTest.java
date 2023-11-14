@@ -47,7 +47,7 @@ class SemVerMojoTest {
 
     @Test
     void noProjectShouldFail() {
-        subject = new SemVerMojo(null, null);
+        subject = new SemVerMojo(null, null, null);
         subject.haltOnFailure = true;
         assertThatThrownBy(() -> subject.execute())
                 .isInstanceOf(MojoExecutionException.class)

@@ -11,14 +11,22 @@ import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.apache.maven.execution.MavenSession;
+import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.apache.maven.project.DefaultProjectBuildingRequest;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.ProjectBuildingRequest;
 import org.apache.maven.repository.RepositorySystem;
+import org.apache.maven.settings.Settings;
+import org.apache.maven.shared.transfer.artifact.resolve.ArtifactResult;
+import org.apache.maven.shared.transfer.dependencies.DefaultDependableCoordinate;
+import org.apache.maven.shared.transfer.dependencies.resolve.DependencyResolver;
+import org.apache.maven.shared.transfer.dependencies.resolve.DependencyResolverException;
 import org.eclipse.aether.resolution.VersionRangeRequest;
 import org.eclipse.aether.resolution.VersionRangeResolutionException;
 import org.eclipse.aether.version.Version;
@@ -28,6 +36,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,6 +46,7 @@ import static org.apache.maven.RepositoryUtils.toArtifact;
 
 @Mojo(name = "check", defaultPhase = LifecyclePhase.VERIFY, threadSafe = true, requiresDependencyResolution = ResolutionScope.COMPILE)
 public class SemVerMojo extends AbstractMojo {
+    private final List<String> RESOLVABLE_SCOPES = List.of("compile", "runtime");
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     MavenProject project;
 
@@ -47,7 +57,7 @@ public class SemVerMojo extends AbstractMojo {
     boolean skip;
 
     /**
-     *  If set to `false` then the plugin will also compare to SNAPSHOT versions if it can find any (in local repo's for example)
+     * If set to `false` then the plugin will also compare to SNAPSHOT versions if it can find any (in local repo's for example)
      */
     @Parameter(property = "ignoreSnapshots", defaultValue = "true")
     boolean ignoreSnapshots;
@@ -65,13 +75,19 @@ public class SemVerMojo extends AbstractMojo {
     boolean failOnIncorrectVersion;
 
     /**
-     *  Only has effect when `failOnIncorrectVersion` is set.  If allowHigherVersions set to `false` it will also break if it detected a is lower then expected version.
+     * If set to `true` then the dependencies will not be compared to the previous version.
+     */
+    @Parameter(property = "skipDependencyCheck", defaultValue = "false")
+    boolean skipDependencyCheck;
+
+    /**
+     * Only has effect when `failOnIncorrectVersion` is set.  If allowHigherVersions set to `false` it will also break if it detected a is lower then expected version.
      */
     @Parameter(property = "allowHigherVersions", defaultValue = "true")
     boolean allowHigherVersions;
 
     /**
-     *  The name of the file where the next version in plain text will be written to. This file is located in the `target` folder. If the property is left empty then no file will be created
+     * The name of the file where the next version in plain text will be written to. This file is located in the `target` folder. If the property is left empty then no file will be created
      */
     @Parameter(property = "outputFileName", defaultValue = "nextVersion.txt")
     String outputFileName;
@@ -102,6 +118,8 @@ public class SemVerMojo extends AbstractMojo {
 
     private final RepositorySystem repoSystem;
 
+    private final DependencyResolver dependencyResolver;
+
     @Parameter(defaultValue = "${project.remoteArtifactRepositories}", readonly = true)
     List<ArtifactRepository> remoteArtifactRepositories;
 
@@ -114,8 +132,9 @@ public class SemVerMojo extends AbstractMojo {
     private final org.eclipse.aether.RepositorySystem aetherRepositorySystem;
 
     @Inject
-    public SemVerMojo(RepositorySystem repoSystem, org.eclipse.aether.RepositorySystem aetherRepositorySystem) {
+    public SemVerMojo(RepositorySystem repoSystem, DependencyResolver dependencyResolver, org.eclipse.aether.RepositorySystem aetherRepositorySystem) {
         this.repoSystem = repoSystem;
+        this.dependencyResolver = dependencyResolver;
         this.aetherRepositorySystem = aetherRepositorySystem;
     }
 
@@ -168,6 +187,14 @@ public class SemVerMojo extends AbstractMojo {
                 Configuration configuration = new Configuration(getExcludePackages(), getExcludeFiles(), runtimeClasspathElements);
                 SemVerChecker semVerChecker = new SemVerChecker(workingFile, file, configuration);
                 semVerType = semVerChecker.determineSemVerType();
+
+                if (SemVerType.NONE.equals(semVerType) && !skipDependencyCheck) {
+                    try {
+                        semVerType = compareDependencies(artifact, artifactVersion);
+                    } catch (DependencyResolverException e) {
+                        getLog().info("Unable to resolve artifact");
+                    }
+                }
             }
         }
         String nextVersion = getNextVersion(artifactVersion, semVerType);
@@ -179,6 +206,83 @@ public class SemVerMojo extends AbstractMojo {
             return;
         }
         writeOutputFile(nextVersion);
+    }
+
+    private SemVerType compareDependencies(Artifact artifact, String artifactVersion) throws DependencyResolverException {
+        List<Artifact> artifactDependencies = getArtifactResults(artifact, artifactVersion);
+        List<Dependency> projectDependencies = project.getDependencies().stream()
+                .filter(d -> RESOLVABLE_SCOPES.contains(d.getScope()))
+                .collect(Collectors.toList());
+
+        for (Artifact artifactResult : artifactDependencies) {
+            boolean found = false;
+            for (Dependency projectDependency : projectDependencies) {
+                if (projectDependency.getGroupId().equals(artifactResult.getGroupId()) &&
+                        projectDependency.getArtifactId().equals(artifactResult.getArtifactId())) {
+                    if (!projectDependency.getVersion().equals(artifactResult.getVersion())) {
+                        getLog().info(String.format("Dependency %s:%s was version %s and is now %s", projectDependency.getGroupId(), projectDependency.getArtifactId(), artifactResult.getVersion(), projectDependency.getVersion()));
+                        return SemVerType.PATCH;
+                    }
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                getLog().info(String.format("Dependency %s:%s is no longer a dependency", artifactResult.getGroupId(), artifactResult.getArtifactId()));
+                return SemVerType.PATCH;
+            }
+        }
+
+        for (Dependency projectDependency : projectDependencies) {
+            boolean found = false;
+            for (Artifact artifactResult : artifactDependencies) {
+                if (projectDependency.getGroupId().equals(artifactResult.getGroupId()) &&
+                        projectDependency.getArtifactId().equals(artifactResult.getArtifactId())) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                getLog().info(String.format("Dependency %s:%s is a new dependency", projectDependency.getGroupId(), projectDependency.getArtifactId()));
+                return SemVerType.PATCH;
+            }
+        }
+
+        return SemVerType.NONE;
+    }
+
+    private List<Artifact> getArtifactResults(Artifact artifact, String artifactVersion) throws DependencyResolverException {
+        List<ArtifactRepository> repoList = new ArrayList<>(remoteArtifactRepositories);
+
+        ProjectBuildingRequest buildingRequest =
+                new DefaultProjectBuildingRequest(mavenSession.getProjectBuildingRequest());
+
+        Settings settings = mavenSession.getSettings();
+        repoSystem.injectMirror(repoList, settings.getMirrors());
+        repoSystem.injectProxy(repoList, settings.getProxies());
+        repoSystem.injectAuthentication(repoList, settings.getServers());
+
+        buildingRequest.setRemoteRepositories(repoList);
+
+        Iterable<ArtifactResult> artifactResult = dependencyResolver.resolveDependencies(buildingRequest, toCoordinate(artifact, artifactVersion), null);
+        List<Artifact> artifactResultList = new ArrayList<>();
+        for (ArtifactResult a : artifactResult) {
+            Artifact resolveArtifact = a.getArtifact();
+            if (!artifact.getGroupId().equals(resolveArtifact.getGroupId()) &&
+                    !artifact.getArtifactId().equals(resolveArtifact.getArtifactId())) {
+                artifactResultList.add(resolveArtifact);
+            }
+        }
+        return artifactResultList;
+    }
+
+    private DefaultDependableCoordinate toCoordinate(Artifact artifact, String artifactVersion) {
+        DefaultDependableCoordinate coordinate = new DefaultDependableCoordinate();
+        coordinate.setGroupId(artifact.getGroupId());
+        coordinate.setArtifactId(artifact.getArtifactId());
+        coordinate.setVersion(artifactVersion);
+        coordinate.setClassifier(artifact.getClassifier());
+        return coordinate;
     }
 
     void failOnIncorrectVersion(SemVerType expectedSemVerType, SemVerType currentSemVerType) throws MojoExecutionException {
