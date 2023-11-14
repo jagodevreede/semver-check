@@ -46,7 +46,7 @@ import static org.apache.maven.RepositoryUtils.toArtifact;
 
 @Mojo(name = "check", defaultPhase = LifecyclePhase.VERIFY, threadSafe = true, requiresDependencyResolution = ResolutionScope.COMPILE)
 public class SemVerMojo extends AbstractMojo {
-    private final List<String> RESOLVABLE_SCOPES = List.of("compile", "runtime");
+    private static final List<String> RESOLVABLE_SCOPES = List.of("compile", "runtime");
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     MavenProject project;
 
@@ -115,6 +115,12 @@ public class SemVerMojo extends AbstractMojo {
      */
     @Parameter(property = "excludeFiles")
     String[] excludeFiles;
+
+    /**
+     * Ignores packages can be a comma separated list or a list of excludePackage
+     */
+    @Parameter(property = "excludeDependencies")
+    String[] excludeDependencies;
 
     private final RepositorySystem repoSystem;
 
@@ -212,6 +218,7 @@ public class SemVerMojo extends AbstractMojo {
         List<Artifact> artifactDependencies = getArtifactResults(artifact, artifactVersion);
         List<Dependency> projectDependencies = project.getDependencies().stream()
                 .filter(d -> RESOLVABLE_SCOPES.contains(d.getScope()))
+                .filter(d -> isExcludedDependency(d.getGroupId(), d.getArtifactId()))
                 .collect(Collectors.toList());
 
         for (Artifact artifactResult : artifactDependencies) {
@@ -251,6 +258,19 @@ public class SemVerMojo extends AbstractMojo {
         return SemVerType.NONE;
     }
 
+    private boolean isExcludedDependency(String groupId, String artifactId) {
+        String name = groupId + ":" + artifactId;
+        if (excludeDependencies == null) {
+            return false;
+        }
+        for (String e : excludeDependencies) {
+            if (name.matches(e)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private List<Artifact> getArtifactResults(Artifact artifact, String artifactVersion) throws DependencyResolverException {
         List<ArtifactRepository> repoList = new ArrayList<>(remoteArtifactRepositories);
 
@@ -269,7 +289,8 @@ public class SemVerMojo extends AbstractMojo {
         for (ArtifactResult a : artifactResult) {
             Artifact resolveArtifact = a.getArtifact();
             if (!artifact.getGroupId().equals(resolveArtifact.getGroupId()) &&
-                    !artifact.getArtifactId().equals(resolveArtifact.getArtifactId())) {
+                    !artifact.getArtifactId().equals(resolveArtifact.getArtifactId()) &&
+                    !isExcludedDependency(resolveArtifact.getGroupId(), resolveArtifact.getArtifactId())) {
                 artifactResultList.add(resolveArtifact);
             }
         }
