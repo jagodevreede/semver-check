@@ -103,7 +103,7 @@ All automated with the github release action.
 
 **Prerequisites:**
 
-- Have pgp keys getup on your machine
+- Have pgp keys setup on your machine
 - Have access to the group id on https://s01.oss.sonatype.org/
 - Have [jreleaser](https://jreleaser.org/guide/latest/install.html) installed
 
