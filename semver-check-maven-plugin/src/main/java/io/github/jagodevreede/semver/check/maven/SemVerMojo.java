@@ -328,7 +328,8 @@ public class SemVerMojo extends AbstractMojo {
                     if (ignoreSnapshots) {
                         return !v.toString().endsWith("-SNAPSHOT");
                     }
-                    return true;
+                    // Ignore self in selecting other versions
+                    return !v.toString().equals(artifact.getBaseVersion());
                 })
                 .sorted()
                 .collect(Collectors.toList());
