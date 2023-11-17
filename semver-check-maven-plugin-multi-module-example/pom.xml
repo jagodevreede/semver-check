@@ -14,6 +14,7 @@
 
     <modules>
         <module>semver-check-maven-plugin-multi-module-example-core</module>
+        <module>semver-check-maven-plugin-multi-module-example-logic</module>
     </modules>
 
     <properties>

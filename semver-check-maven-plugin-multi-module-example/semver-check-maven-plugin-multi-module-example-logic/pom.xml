@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>semver-check-maven-plugin-multi-module-example-logic</artifactId>
+    <name>SemVer check Java maven plugin multi module example logic</name>
+
+    <parent>
+        <artifactId>semver-check-maven-plugin-multi-module-example-root</artifactId>
+        <groupId>io.github.jagodevreede</groupId>
+        <version>0.4.1-SNAPSHOT</version>
+    </parent>
+
+    <build>
+        <plugins>
+            <!-- Don't deploy this module as it is only used in unit tests, based on file location -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.github.jagodevreede</groupId>
+            <artifactId>semver-check-maven-plugin-multi-module-example-core</artifactId>
+            <version>${parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+</project>
