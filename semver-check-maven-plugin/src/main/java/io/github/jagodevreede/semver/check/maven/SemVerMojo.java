@@ -198,7 +198,7 @@ public class SemVerMojo extends AbstractMojo {
                     try {
                         semVerType = compareDependencies(artifact, artifactVersion);
                     } catch (DependencyResolverException e) {
-                        getLog().info("Unable to resolve artifact");
+                        getLog().info("Unable to resolve artifact due to: " + e.getMessage());
                     }
                 }
             }
@@ -218,7 +218,7 @@ public class SemVerMojo extends AbstractMojo {
         List<Artifact> artifactDependencies = getArtifactResults(artifact, artifactVersion);
         List<Dependency> projectDependencies = project.getDependencies().stream()
                 .filter(d -> RESOLVABLE_SCOPES.contains(d.getScope()))
-                .filter(d -> isExcludedDependency(d.getGroupId(), d.getArtifactId()))
+                .filter(d -> !isExcludedDependency(d.getGroupId(), d.getArtifactId()))
                 .collect(Collectors.toList());
 
         for (Artifact artifactResult : artifactDependencies) {
