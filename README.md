@@ -48,8 +48,7 @@ Add the following configuration to your `pom.xml` and set the VERSION_NUMBER to 
 </build>
 ```
 
-This plugin can be used with a multimodule project, an example project can be found [here]](
-semver-check-maven-plugin-multi-module-example).
+This plugin can be used with a multimodule project, an example project can be found [here](https://github.com/jagodevreede/semver-check/tree/main/semver-check-maven-plugin-multi-module-example).
 
 ## Configuration
 
