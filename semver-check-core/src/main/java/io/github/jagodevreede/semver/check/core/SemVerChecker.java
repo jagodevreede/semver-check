@@ -21,6 +21,7 @@ import static io.github.jagodevreede.semver.check.core.SemVerType.*;
 @SuppressWarnings("rawtypes")
 public class SemVerChecker {
     private static final Logger log = LoggerFactory.getLogger(SemVerChecker.class);
+    private static final String MODULE_INFO_CLASS_NAME = "module-info";
 
     private SemVerType result = NONE;
 
@@ -289,6 +290,10 @@ public class SemVerChecker {
         Set<ClassInformation> classes = new HashSet<>(classNames.size());
         try (URLClassLoader cl = URLClassLoader.newInstance(jarsInRuntime.toArray(new URL[0]))) {
             for (String name : classNames) {
+                if (MODULE_INFO_CLASS_NAME.equals(name)) {
+                    log.debug("Skipping module-info as that is not a class");
+                    continue;
+                }
                 try {
                     Class aClass = cl.loadClass(name);
                     Map<Constructor, Annotation[]> constructorsAndAnnotations = getAnnotationMapFromAccessibleObject(aClass.getConstructors());
