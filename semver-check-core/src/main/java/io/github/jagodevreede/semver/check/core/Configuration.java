@@ -12,13 +12,13 @@ public class Configuration {
 
     private final List<Pattern> includePackages;
     private final List<Pattern> excludePackages;
-    private final List<String> excludeFiles;
+    private final List<Pattern> excludeFiles;
     private final List<String> runtimeClasspathElements;
 
     public Configuration(List<String> includePackages, List<String> excludePackages, List<String> excludeFiles, List<String> runtimeClasspathElements) {
         this.includePackages = includePackages.stream().map(Pattern::compile).collect(Collectors.toList());
-        this.excludePackages = excludePackages.stream().map(Pattern::compile).collect(Collectors.toList());;
-        this.excludeFiles = excludeFiles;
+        this.excludePackages = excludePackages.stream().map(Pattern::compile).collect(Collectors.toList());
+        this.excludeFiles = excludeFiles.stream().map(Pattern::compile).collect(Collectors.toList());
         this.runtimeClasspathElements = runtimeClasspathElements;
     }
 
@@ -30,7 +30,7 @@ public class Configuration {
         return excludePackages;
     }
 
-    public List<String> getExcludeFiles() {
+    public List<Pattern> getExcludeFiles() {
         return excludeFiles;
     }
 
@@ -53,6 +53,16 @@ public class Configuration {
         if (!getIncludePackages().isEmpty()) {
             log.debug("Class {} is skipped as it is not included in the check", aClass.getClazz().getName());
             return true;
+        }
+        return false;
+    }
+
+    public boolean isFileExcluded(String fileName) {
+        for (Pattern excludeFile : getExcludeFiles()) {
+            if (excludeFile.matcher(fileName).matches()) {
+                log.debug("File {} is skipped as it is excluded from the check as it in excluded files {}", fileName, excludeFile);
+                return true;
+            }
         }
         return false;
     }
