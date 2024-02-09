@@ -99,6 +99,19 @@ public class SemVerChecker {
                 }
             } else {
                 log.debug("Class {} is skipped as it is not public api", originalClass.getName());
+                // TODO non public api classes can lead to patch versions
+            }
+        }
+
+        for (ClassInformation newClass : classesInNewJar) {
+            if (isExcluded(newClass)) {
+                continue;
+            }
+            Optional<ClassInformation> classInOriginalJar = classesInOriginalJar.stream().filter(c -> c.getName().equals(newClass.getName())).findFirst();
+            if (classInOriginalJar.isEmpty()) {
+                log.info("Class {} has been added", newClass.getName());
+                result = updateResult(result, MINOR);
+                break;
             }
         }
 

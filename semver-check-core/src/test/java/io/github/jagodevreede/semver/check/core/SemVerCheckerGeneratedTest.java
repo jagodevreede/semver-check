@@ -160,13 +160,25 @@ class SemVerCheckerGeneratedTest {
     }
 
     @Nested
+    class packageAdded {
+        @Test
+        void addedNewPackageAndClass() throws Exception {
+            var gen = new TestDataGenerator("com.example", "ClassInPackage");
+            gen.compileClass();
+            gen.addClassToJar(jarAsChanged);
+
+            checkAndReversed(MINOR, MAJOR);
+        }
+    }
+
+    @Nested
     class resourceFile {
         @Test
         void addedFile() throws Exception {
             var gen = new TestDataGenerator("resource");
             gen.add("Some text");
             gen.writeFile(".txt");
-            gen.addFileToJar(jarAsChanged, ".txt");
+            gen.addFileToJar(jarAsChanged, ".txt", "/");
 
             checkAndReversed(PATCH, MAJOR);
         }
@@ -176,9 +188,9 @@ class SemVerCheckerGeneratedTest {
             var gen = new TestDataGenerator("resource");
             gen.add("Some text");
             gen.writeFile(".txt");
-            gen.addFileToJar(jarAsChanged, ".txt");
+            gen.addFileToJar(jarAsChanged, ".txt", "/");
             gen.writeFile(".txt");
-            gen.addFileToJar(jarAsOriginal, ".txt");
+            gen.addFileToJar(jarAsOriginal, ".txt", "/");
 
             checkAndReversed(PATCH, PATCH);
         }
