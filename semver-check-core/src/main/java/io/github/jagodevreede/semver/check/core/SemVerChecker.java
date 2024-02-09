@@ -78,29 +78,33 @@ public class SemVerChecker {
             if (isExcluded(originalClass)) {
                 continue;
             }
-            if (Modifier.isPublic(originalClass.getClazz().getModifiers())) {
-                Optional<ClassInformation> classInNewJar = classesInNewJar.stream().filter(c -> c.getName().equals(originalClass.getName())).findFirst();
-                if (classInNewJar.isEmpty()) {
-                    log.info("Class {} is removed", originalClass.getName());
-                    result = updateResult(result, MAJOR);
+            Optional<ClassInformation> classInNewJar = classesInNewJar.stream().filter(c -> c.getName().equals(originalClass.getName())).findFirst();
+            var classResult = NONE;
+            if (classInNewJar.isEmpty()) {
+                if (Modifier.isPublic(originalClass.getClazz().getModifiers())) {
+                    log.info("Public Class {} is removed", originalClass.getName());
+                    classResult = MAJOR;
                 } else {
-                    var classResult = determineClassDifference(originalClass, classInNewJar.get());
-                    if (NONE.equals(classResult)) {
-                        JarEntry originalEntry = getJarEntry(original, originalClass.getName());
-                        JarEntry newEntry = getJarEntry(newJar, originalClass.getName());
-                        if (originalEntry.getCrc() != newEntry.getCrc()) {
-                            log.info("Class {} has been changed on byte level", originalClass.getName());
-                            result = updateResult(result, PATCH);
-                        } else {
-                            log.debug("Class {} remains the same", originalClass.getName());
-                        }
-                    } else {
-                        result = updateResult(result, classResult);
-                    }
+                    log.info("Non-Public Class {} is removed", originalClass.getName());
+                    classResult = PATCH;
                 }
+                result = updateResult(result, classResult);
             } else {
-                log.debug("Class {} is skipped as it is not public api", originalClass.getName());
-                // TODO non public api classes can lead to patch versions
+                if (Modifier.isPublic(originalClass.getClazz().getModifiers())) {
+                    classResult = determineClassDifference(originalClass, classInNewJar.get());
+                }
+                if (NONE.equals(classResult)) {
+                    JarEntry originalEntry = getJarEntry(original, originalClass.getName());
+                    JarEntry newEntry = getJarEntry(newJar, originalClass.getName());
+                    if (originalEntry.getCrc() != newEntry.getCrc()) {
+                        log.info("Class {} has been changed on byte level", originalClass.getName());
+                        result = updateResult(result, PATCH);
+                    } else {
+                        log.debug("Class {} remains the same", originalClass.getName());
+                    }
+                } else {
+                    result = updateResult(result, classResult);
+                }
             }
         }
 
@@ -110,9 +114,15 @@ public class SemVerChecker {
             }
             Optional<ClassInformation> classInOriginalJar = classesInOriginalJar.stream().filter(c -> c.getName().equals(newClass.getName())).findFirst();
             if (classInOriginalJar.isEmpty()) {
-                log.info("Class {} has been added", newClass.getName());
-                result = updateResult(result, MINOR);
-                break;
+                if (Modifier.isPublic(newClass.getClazz().getModifiers())) {
+                    log.info("Public class {} has been added", newClass.getName());
+                    result = updateResult(result, MINOR);
+                    break;
+                } else {
+                    log.info("Non-public Class {} has been added", newClass.getName());
+                    result = updateResult(result, PATCH);
+                }
+
             }
         }
 

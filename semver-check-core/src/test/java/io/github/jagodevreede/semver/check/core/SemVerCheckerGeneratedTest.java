@@ -38,6 +38,24 @@ class SemVerCheckerGeneratedTest {
         jarAsOriginal.delete();
     }
 
+    @Test
+    void addedNonPublicClass() throws Exception {
+        var gen = new TestDataGenerator("NonPublicClass", false);
+        gen.compileClass();
+        gen.addClassToJar(jarAsChanged);
+
+        checkAndReversed(PATCH, PATCH);
+    }
+
+    @Test
+    void addedPublicClass() throws Exception {
+        var gen = new TestDataGenerator("PublicClass", true);
+        gen.compileClass();
+        gen.addClassToJar(jarAsChanged);
+
+        checkAndReversed(MINOR, MAJOR);
+    }
+
     @Nested
     class classAInOriginalWithPublicApi {
         @BeforeEach

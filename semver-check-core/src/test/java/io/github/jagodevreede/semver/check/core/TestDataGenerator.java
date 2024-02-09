@@ -27,17 +27,24 @@ public class TestDataGenerator {
         out.print("package ");
         out.print(packageName);
         out.println(";");
-        initClass(className);
+        initClass(className, true);
+    }
+
+    TestDataGenerator(String className, boolean isPublic) {
+        this.packageName = "";
+        this.className = className;
+        initClass(className,isPublic);
     }
 
     TestDataGenerator(String className) {
-        this.packageName = "";
-        this.className = className;
-        initClass(className);
+        this(className, true);
     }
 
-    private void initClass(String className) {
-        out.print("public class ");
+    private void initClass(String className, boolean isPublic) {
+        if (isPublic) {
+            out.print("public ");
+        }
+        out.print("class ");
         out.print(className);
         out.println(" {");
     }
