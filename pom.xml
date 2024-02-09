@@ -40,9 +40,10 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.version>3.3.9</maven.version>
 
-        <slf4j.version>2.0.9</slf4j.version>
-        <mockito.version>5.7.0</mockito.version>
-        <junit.version>5.10.1</junit.version>
+        <slf4j.version>2.0.11</slf4j.version>
+        <mockito.version>5.10.0</mockito.version>
+        <assertj.version>3.25.3</assertj.version>
+        <junit.version>5.10.2</junit.version>
     </properties>
 
     <modules>
@@ -87,7 +88,7 @@
             <dependency>
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>
-                <version>3.24.2</version>
+                <version>${assertj.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
