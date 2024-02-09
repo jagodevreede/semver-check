@@ -190,7 +190,7 @@ public class SemVerMojo extends AbstractMojo {
                 List<String> runtimeClasspathElements = project.getArtifacts().stream().map(a -> a.getFile().getAbsolutePath()).collect(Collectors.toList());
                 getLog().debug("Runtime classpath elements are " + String.join(", ", runtimeClasspathElements));
 
-                Configuration configuration = new Configuration(getExcludePackages(), getExcludeFiles(), runtimeClasspathElements);
+                Configuration configuration = new Configuration(getIncludePackages(), getExcludePackages(), getExcludeFiles(), runtimeClasspathElements);
                 SemVerChecker semVerChecker = new SemVerChecker(workingFile, file, configuration);
                 semVerType = semVerChecker.determineSemVerType();
 
@@ -339,6 +339,13 @@ public class SemVerMojo extends AbstractMojo {
                 updateParentOutputFile(nextVersion, project.getParent());
             }
         }
+    }
+
+    private List<String> getIncludePackages() {
+        if (excludePackages == null) {
+            return List.of();
+        }
+        return Arrays.asList(excludePackages);
     }
 
     private List<String> getExcludePackages() {

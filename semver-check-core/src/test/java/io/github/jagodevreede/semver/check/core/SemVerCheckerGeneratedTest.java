@@ -19,7 +19,7 @@ class SemVerCheckerGeneratedTest {
     private final File baseJar;
     private final File jarAsOriginal = new File("target/original.jar");
     private final File jarAsChanged = new File("target/changed.jar");
-    private final Configuration emptyConfiguration = new Configuration(List.of(), List.of(), List.of());
+    private final Configuration emptyConfiguration = new Configuration(List.of(), List.of(), List.of(), List.of());
 
     SemVerCheckerGeneratedTest() {
         baseJar = new File("../sample/sample-base/target/semver-check-sample-base-1.0.0-SNAPSHOT.jar");
@@ -98,7 +98,7 @@ class SemVerCheckerGeneratedTest {
             gen.compileClass();
             gen.addClassToJar(jarAsOriginal);
         }
-        
+
         @Test
         void classNotInChanged() throws Exception {
             check(MAJOR);
@@ -179,13 +179,40 @@ class SemVerCheckerGeneratedTest {
 
     @Nested
     class packageAdded {
-        @Test
-        void addedNewPackageAndClass() throws Exception {
+        @BeforeEach
+        void createScenario() throws IOException {
             var gen = new TestDataGenerator("com.example", "ClassInPackage");
             gen.compileClass();
             gen.addClassToJar(jarAsChanged);
+        }
 
+        @Test
+        void addedNewPackageAndClass() throws Exception {
             checkAndReversed(MINOR, MAJOR);
+        }
+
+        @Test
+        void onlyIncludeNormalPackage() throws Exception {
+            Configuration configuration = new Configuration(List.of("io.github.jagodevreede.semver.sample"), List.of(), List.of(), List.of());
+            check(NONE, configuration);
+        }
+
+        @Test
+        void onlyIncludeNormalPackageRegex() throws Exception {
+            Configuration configuration = new Configuration(List.of(".*api$", ".*sample$", "otherthing.*"), List.of(), List.of(), List.of());
+            check(NONE, configuration);
+        }
+
+        @Test
+        void excludeNewPackage() throws Exception {
+            Configuration configuration = new Configuration(List.of(), List.of("com.example"), List.of(), List.of());
+            check(NONE, configuration);
+        }
+
+        @Test
+        void excludeNewPackageRegex() throws Exception {
+            Configuration configuration = new Configuration(List.of(), List.of(".*example$"), List.of(), List.of());
+            check(NONE, configuration);
         }
     }
 
@@ -214,10 +241,14 @@ class SemVerCheckerGeneratedTest {
         }
     }
 
-    private void check(SemVerType verResult) throws IOException {
-        final SemVerChecker subject = new SemVerChecker(jarAsOriginal, jarAsChanged, emptyConfiguration);
+    private void check(SemVerType verResult, Configuration configuration) throws IOException {
+        final SemVerChecker subject = new SemVerChecker(jarAsOriginal, jarAsChanged, configuration);
         var result = subject.determineSemVerType();
         assertThat(result).as("result").isEqualTo(verResult);
+    }
+
+    private void check(SemVerType verResult) throws IOException {
+        check(verResult, emptyConfiguration);
     }
 
     private void checkReversed(SemVerType verResult) throws IOException {

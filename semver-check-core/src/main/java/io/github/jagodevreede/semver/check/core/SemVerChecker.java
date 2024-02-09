@@ -75,7 +75,7 @@ public class SemVerChecker {
         Set<ClassInformation> classesInNewJar = getClassesInJar(newJar);
 
         for (ClassInformation originalClass : classesInOriginalJar) {
-            if (isExcluded(originalClass)) {
+            if (configuration.isExcluded(originalClass)) {
                 continue;
             }
             Optional<ClassInformation> classInNewJar = classesInNewJar.stream().filter(c -> c.getName().equals(originalClass.getName())).findFirst();
@@ -109,7 +109,7 @@ public class SemVerChecker {
         }
 
         for (ClassInformation newClass : classesInNewJar) {
-            if (isExcluded(newClass)) {
+            if (configuration.isExcluded(newClass)) {
                 continue;
             }
             Optional<ClassInformation> classInOriginalJar = classesInOriginalJar.stream().filter(c -> c.getName().equals(newClass.getName())).findFirst();
@@ -170,16 +170,6 @@ public class SemVerChecker {
         for (String excludeFile : configuration.getExcludeFiles()) {
             if (key.startsWith(excludeFile)) {
                 log.debug("File {} is skipped as it is excluded from the check as it in excluded files {}", key, excludeFile);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean isExcluded(ClassInformation originalClass) {
-        for (String excludePackage : configuration.getExcludePackages()) {
-            if (originalClass.getClazz().getPackage().getName().startsWith(excludePackage)) {
-                log.debug("Class {} is skipped as it is excluded from the check as it in excluded package {}", originalClass.getClazz().getName(), excludePackage);
                 return true;
             }
         }
