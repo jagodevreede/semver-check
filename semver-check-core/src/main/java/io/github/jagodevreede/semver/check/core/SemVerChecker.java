@@ -310,6 +310,7 @@ public class SemVerChecker {
         return jarFile.stream()
                 .filter(jarEntry -> !jarEntry.getName().endsWith(".class"))
                 .filter(jarEntry -> !jarEntry.getName().startsWith("META-INF/maven/"))
+                .filter(jarEntry -> !jarEntry.isDirectory())
                 .collect(Collectors.toMap(JarEntry::getName, Function.identity()));
     }
 
