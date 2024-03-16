@@ -58,7 +58,8 @@
                     <outputFileName>nextVersion.txt</outputFileName>
                     <includePackages>
                         <includePackage>.*something\.api$</includePackage> <!-- Can be regex -->
-                        <includePackage>io.something.else</includePackage> <!-- Can be fully qualified -->
+                        <includePackage>io.something.api</includePackage> <!-- Can be fully qualified -->
+                        <includePackage>io.github.jagodevreede.*</includePackage> <!-- Can be fully qualified -->
                     </includePackages>
                     <excludePackages>
                         <excludePackage>com.something.*</excludePackage> <!-- Can be regex -->
