@@ -177,7 +177,7 @@ public class SemVerMojo extends AbstractMojo {
         }
     }
 
-    private void determineVersionInformation(Artifact artifact, File workingFile) throws IOException, MojoExecutionException, VersionRangeResolutionException {
+    private void determineVersionInformation(Artifact artifact, File fileInTarget) throws IOException, MojoExecutionException, VersionRangeResolutionException {
         if (getLog().isDebugEnabled() && excludePackages != null) {
             getLog().debug("Excluded packages are " + getExcludePackages());
         }
@@ -189,8 +189,8 @@ public class SemVerMojo extends AbstractMojo {
             artifactVersion = artifact.getVersion();
         } else {
             artifactVersion = artifactVersions.get(artifactVersions.size() - 1).toString();
-            File file = getLastVersion(artifact, artifactVersion);
-            if (!file.exists()) {
+            File fileAttachedToLastKnowVersion = getLastVersion(artifact, artifactVersion);
+            if (!fileAttachedToLastKnowVersion.exists()) {
                 getLog().warn("Artifact " + artifactVersion + " has no attached file?");
             } else {
                 getLog().info("Checking SemVer against last known version " + artifactVersion);
@@ -198,7 +198,7 @@ public class SemVerMojo extends AbstractMojo {
                 getLog().debug("Runtime classpath elements are " + String.join(", ", runtimeClasspathElements));
 
                 Configuration configuration = new Configuration(getIncludePackages(), getExcludePackages(), getExcludeFiles(), runtimeClasspathElements);
-                SemVerChecker semVerChecker = new SemVerChecker(workingFile, file, configuration);
+                SemVerChecker semVerChecker = new SemVerChecker(fileAttachedToLastKnowVersion, fileInTarget, configuration);
                 semVerType = semVerChecker.determineSemVerType();
 
                 if (SemVerType.NONE.equals(semVerType) && !skipDependencyCheck) {
