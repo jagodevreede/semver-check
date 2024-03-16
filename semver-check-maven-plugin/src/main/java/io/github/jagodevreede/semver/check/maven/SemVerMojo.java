@@ -105,6 +105,13 @@ public class SemVerMojo extends AbstractMojo {
     boolean writeFileOnNone;
 
     /**
+     * Only uses packages in the list and ignores any others, can be a comma separated list or a list of includePackage.
+     * Values are a regex pattern.
+     */
+    @Parameter(property = "includePackages")
+    String[] includePackages;
+
+    /**
      * Ignores packages can be a comma separated list or a list of excludePackage
      */
     @Parameter(property = "excludePackages")
@@ -342,10 +349,10 @@ public class SemVerMojo extends AbstractMojo {
     }
 
     private List<String> getIncludePackages() {
-        if (excludePackages == null) {
+        if (includePackages == null) {
             return List.of();
         }
-        return Arrays.asList(excludePackages);
+        return Arrays.asList(includePackages);
     }
 
     private List<String> getExcludePackages() {
