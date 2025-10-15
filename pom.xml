@@ -40,10 +40,11 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.version>3.3.9</maven.version>
 
-        <slf4j.version>2.0.12</slf4j.version>
+        <slf4j.version>2.0.13</slf4j.version>
         <mockito.version>5.11.0</mockito.version>
-        <assertj.version>3.25.3</assertj.version>
+        <assertj.version>3.27.6</assertj.version>
         <junit.version>5.10.2</junit.version>
+        <jacoco-maven-plugin.version>0.8.14</jacoco-maven-plugin.version>
     </properties>
 
     <modules>
@@ -224,7 +225,7 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>0.8.11</version>
+                        <version>${jacoco-maven-plugin.version}</version>
                         <executions>
                             <execution>
                                 <id>default-prepare-agent</id>
