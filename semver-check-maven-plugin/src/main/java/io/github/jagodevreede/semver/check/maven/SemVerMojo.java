@@ -105,6 +105,22 @@ public class SemVerMojo extends AbstractMojo {
     boolean writeFileOnNone;
 
     /**
+     * Strategy to use when an annotation is added.
+     * Possible values: MAJOR, MINOR, PATCH, NONE.
+     * Default is MINOR.
+     */
+    @Parameter(property = "annotationAddedStrategy", defaultValue = "MINOR")
+    SemVerType annotationAddedStrategy;
+
+    /**
+     * Strategy to use when an annotation is removed.
+     * Possible values: MAJOR, MINOR, PATCH, NONE.
+     * Default is MAJOR.
+     */
+    @Parameter(property = "annotationRemovedStrategy", defaultValue = "MAJOR")
+    SemVerType annotationRemovedStrategy;
+
+    /**
      * Only uses packages in the list and ignores any others, can be a comma separated list or a list of includePackage.
      * Values are a regex pattern.
      */
@@ -197,7 +213,7 @@ public class SemVerMojo extends AbstractMojo {
                 List<String> runtimeClasspathElements = project.getArtifacts().stream().map(a -> a.getFile().getAbsolutePath()).collect(Collectors.toList());
                 getLog().debug("Runtime classpath elements are " + String.join(", ", runtimeClasspathElements));
 
-                Configuration configuration = new Configuration(getIncludePackages(), getExcludePackages(), getExcludeFiles(), runtimeClasspathElements);
+                Configuration configuration = new Configuration(getIncludePackages(), getExcludePackages(), getExcludeFiles(), runtimeClasspathElements, annotationAddedStrategy, annotationRemovedStrategy);
                 SemVerChecker semVerChecker = new SemVerChecker(fileAttachedToLastKnowVersion, fileInTarget, configuration);
                 semVerType = semVerChecker.determineSemVerType();
 

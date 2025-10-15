@@ -7,6 +7,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 import java.io.File;
 import java.util.List;
 
+import static io.github.jagodevreede.semver.check.core.SemVerType.MAJOR;
+import static io.github.jagodevreede.semver.check.core.SemVerType.MINOR;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class SemVerCheckerSimpleTest {
@@ -15,7 +17,7 @@ class SemVerCheckerSimpleTest {
     private final File baseJar;
     private final File additionJar;
     private final File changedJavaVersionJar;
-    private final Configuration emptyConfiguration = new Configuration(List.of(), List.of(), DEFAULT_EXCLUDED_FILES, List.of());
+    private final Configuration emptyConfiguration = new Configuration(List.of(), List.of(), DEFAULT_EXCLUDED_FILES, List.of(), MINOR, MAJOR);
 
     SemVerCheckerSimpleTest() {
         baseJar = new File("../sample/sample-base/target/semver-check-sample-base-1.0.0-SNAPSHOT.jar");
@@ -44,7 +46,7 @@ class SemVerCheckerSimpleTest {
         String userHome = System.getProperty("user.home");
         List<String> dependencyLocations = List.of("../sample/sample-dependency/target/classes", userHome + "/.m2/repository/com/fasterxml/jackson/core/jackson-annotations/2.15.2/jackson-annotations-2.15.2.jar");
         File dependencyAddedJar = new File("../sample/sample-dependency/target/semver-check-sample-dependency-1.0.0-SNAPSHOT.jar");
-        Configuration configuration = new Configuration(List.of(), List.of(), DEFAULT_EXCLUDED_FILES, dependencyLocations);
+        Configuration configuration = new Configuration(List.of(), List.of(), DEFAULT_EXCLUDED_FILES, dependencyLocations, MINOR, MAJOR);
         final SemVerChecker subject = new SemVerChecker(baseJar, dependencyAddedJar, configuration);
         var result = subject.determineSemVerType();
 
@@ -58,7 +60,7 @@ class SemVerCheckerSimpleTest {
     })
     @ParameterizedTest
     void determineSemVerType_additionIsNoneIfPackageExcluded(String excludedPackage) throws Exception {
-        Configuration configuration = new Configuration(List.of(), List.of("com.acme", excludedPackage), DEFAULT_EXCLUDED_FILES, List.of());
+        Configuration configuration = new Configuration(List.of(), List.of("com.acme", excludedPackage), DEFAULT_EXCLUDED_FILES, List.of(), MINOR, MAJOR);
         final SemVerChecker subject = new SemVerChecker(baseJar, additionJar, configuration);
         var result = subject.determineSemVerType();
 
@@ -80,7 +82,7 @@ class SemVerCheckerSimpleTest {
     })
     @ParameterizedTest
     void determineSemVerType_removalOfMethodIsNoneIfPackageExcluded(String excludedPackage) throws Exception {
-        Configuration configuration = new Configuration(List.of(), List.of("com.acme.*", excludedPackage), DEFAULT_EXCLUDED_FILES, List.of());
+        Configuration configuration = new Configuration(List.of(), List.of("com.acme.*", excludedPackage), DEFAULT_EXCLUDED_FILES, List.of(), MINOR, MAJOR);
         final SemVerChecker subject = new SemVerChecker(additionJar, baseJar, configuration);
         var result = subject.determineSemVerType();
 

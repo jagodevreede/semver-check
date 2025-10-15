@@ -224,7 +224,7 @@ public class SemVerChecker {
         return NONE;
     }
 
-    private static SemVerType getSemVerType(AccessibleObject originalClassMember, Annotation[] annotationsInNew, Annotation[] annotationsInOriginal) {
+    private SemVerType getSemVerType(AccessibleObject originalClassMember, Annotation[] annotationsInNew, Annotation[] annotationsInOriginal) {
         for (Annotation annotationInOriginal : annotationsInOriginal) {
             boolean foundInNew = false;
             for (Annotation annotationInNew : annotationsInNew) {
@@ -235,7 +235,7 @@ public class SemVerChecker {
             }
             if (!foundInNew) {
                 log.info("Annotation {} is not available on {}", annotationInOriginal.toString(), originalClassMember);
-                return MAJOR;
+                return configuration.getAnnotationRemovedStrategy();
             }
         }
         for (Annotation annotationInNew : annotationsInNew) {
@@ -248,7 +248,7 @@ public class SemVerChecker {
             }
             if (!foundInOriginal) {
                 log.info("Annotation {} is has been added on {}", annotationInNew.toString(), originalClassMember);
-                return MINOR;
+                return configuration.getAnnotationAddedStrategy();
             }
         }
         return NONE;

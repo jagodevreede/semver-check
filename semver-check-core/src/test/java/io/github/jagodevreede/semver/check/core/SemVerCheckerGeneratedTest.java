@@ -19,7 +19,7 @@ class SemVerCheckerGeneratedTest {
     private final File baseJar;
     private final File jarAsOriginal = new File("target/original.jar");
     private final File jarAsChanged = new File("target/changed.jar");
-    private final Configuration emptyConfiguration = new Configuration(List.of(), List.of(), List.of(), List.of());
+    private final Configuration emptyConfiguration = new Configuration(List.of(), List.of(), List.of(), List.of(), MINOR, MAJOR);
 
     SemVerCheckerGeneratedTest() {
         baseJar = new File("../sample/sample-base/target/semver-check-sample-base-1.0.0-SNAPSHOT.jar");
@@ -78,6 +78,18 @@ class SemVerCheckerGeneratedTest {
         }
 
         @Test
+        void addedAnnotationToMethodWithConfigOverride() throws Exception {
+            var gen = new TestDataGenerator("ClassA");
+            gen.add("@Deprecated");
+            gen.add("public void somethingYouShouldSee() {}");
+            gen.compileClass();
+            gen.addClassToJar(jarAsChanged);
+
+            Configuration configuration = new Configuration(List.of(), List.of(".*example$"), List.of(), List.of(), PATCH, MAJOR);
+            check(PATCH, configuration);
+        }
+
+        @Test
         void removedAnnotationFromMethod() throws Exception {
             var gen = new TestDataGenerator("ClassA");
             gen.add("@Deprecated");
@@ -86,6 +98,18 @@ class SemVerCheckerGeneratedTest {
             gen.addClassToJar(jarAsChanged);
 
             checkReversed(MAJOR);
+        }
+
+        @Test
+        void removedAnnotationFromMethodWithConfigOverride() throws Exception {
+            var gen = new TestDataGenerator("ClassA");
+            gen.add("@Deprecated");
+            gen.add("public void somethingYouShouldSee() {}");
+            gen.compileClass();
+            gen.addClassToJar(jarAsChanged);
+
+            Configuration configuration = new Configuration(List.of(), List.of(".*example$"), List.of(), List.of(), MINOR, PATCH);
+            checkReversed(PATCH, configuration);
         }
     }
 
@@ -193,25 +217,25 @@ class SemVerCheckerGeneratedTest {
 
         @Test
         void onlyIncludeNormalPackage() throws Exception {
-            Configuration configuration = new Configuration(List.of("io.github.jagodevreede.semver.sample"), List.of(), List.of(), List.of());
+            Configuration configuration = new Configuration(List.of("io.github.jagodevreede.semver.sample"), List.of(), List.of(), List.of(), MINOR, MAJOR);
             check(NONE, configuration);
         }
 
         @Test
         void onlyIncludeNormalPackageRegex() throws Exception {
-            Configuration configuration = new Configuration(List.of(".*api$", ".*sample$", "otherthing.*"), List.of(), List.of(), List.of());
+            Configuration configuration = new Configuration(List.of(".*api$", ".*sample$", "otherthing.*"), List.of(), List.of(), List.of(), MINOR, MAJOR);
             check(NONE, configuration);
         }
 
         @Test
         void excludeNewPackage() throws Exception {
-            Configuration configuration = new Configuration(List.of(), List.of("com.example"), List.of(), List.of());
+            Configuration configuration = new Configuration(List.of(), List.of("com.example"), List.of(), List.of(), MINOR, MAJOR);
             check(NONE, configuration);
         }
 
         @Test
         void excludeNewPackageRegex() throws Exception {
-            Configuration configuration = new Configuration(List.of(), List.of(".*example$"), List.of(), List.of());
+            Configuration configuration = new Configuration(List.of(), List.of(".*example$"), List.of(), List.of(), MINOR, MAJOR);
             check(NONE, configuration);
         }
     }
@@ -252,7 +276,11 @@ class SemVerCheckerGeneratedTest {
     }
 
     private void checkReversed(SemVerType verResult) throws IOException {
-        final SemVerChecker subject = new SemVerChecker(jarAsChanged, jarAsOriginal, emptyConfiguration);
+        checkReversed(verResult, emptyConfiguration);
+    }
+
+    private void checkReversed(SemVerType verResult, Configuration configuration) throws IOException {
+        final SemVerChecker subject = new SemVerChecker(jarAsChanged, jarAsOriginal, configuration);
         var result = subject.determineSemVerType();
         assertThat(result).as("Reversed result").isEqualTo(verResult);
     }

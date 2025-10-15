@@ -14,12 +14,22 @@ public class Configuration {
     private final List<Pattern> excludePackages;
     private final List<Pattern> excludeFiles;
     private final List<String> runtimeClasspathElements;
+    private final SemVerType annotationAddedStrategy;
+    private final SemVerType annotationRemovedStrategy;
 
-    public Configuration(List<String> includePackages, List<String> excludePackages, List<String> excludeFiles, List<String> runtimeClasspathElements) {
+    public Configuration(
+            List<String> includePackages,
+            List<String> excludePackages,
+            List<String> excludeFiles,
+            List<String> runtimeClasspathElements,
+            SemVerType annotationAddedStrategy,
+            SemVerType annotationRemovedStrategy) {
         this.includePackages = includePackages.stream().map(Pattern::compile).collect(Collectors.toList());
         this.excludePackages = excludePackages.stream().map(Pattern::compile).collect(Collectors.toList());
         this.excludeFiles = excludeFiles.stream().map(Pattern::compile).collect(Collectors.toList());
         this.runtimeClasspathElements = runtimeClasspathElements;
+        this.annotationAddedStrategy = annotationAddedStrategy;
+        this.annotationRemovedStrategy = annotationRemovedStrategy;
     }
 
     public List<Pattern> getIncludePackages() {
@@ -65,5 +75,13 @@ public class Configuration {
             }
         }
         return false;
+    }
+
+    public SemVerType getAnnotationRemovedStrategy() {
+        return annotationRemovedStrategy;
+    }
+
+    public SemVerType getAnnotationAddedStrategy() {
+        return annotationAddedStrategy;
     }
 }
