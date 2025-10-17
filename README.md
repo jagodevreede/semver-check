@@ -10,6 +10,7 @@ of [Semantic Versioning](https://semver.org/).
 ## Prerequisites
 
 This plugin requires Maven 3.3.9 and Java 11 or higher to be able to run.
+Tested working on maven 4-RC4 and JDK 25.
 
 ## Usage
 
