@@ -56,6 +56,23 @@ class SemVerCheckerGeneratedTest {
         checkAndReversed(MINOR, MAJOR);
     }
 
+    @Test
+    void changedAnnotation() throws Exception {
+        var gen = new TestDataGenerator("ClassB");
+        gen.add("@Deprecated(since = \"1\")");
+        gen.add("public void somethingYouShouldSee() {}");
+        gen.compileClass();
+        gen.addClassToJar(jarAsOriginal);
+
+        gen = new TestDataGenerator("ClassB");
+        gen.add("@Deprecated(since = \"2\")");
+        gen.add("public void somethingYouShouldSee() {}");
+        gen.compileClass();
+        gen.addClassToJar(jarAsChanged);
+
+        checkReversed(PATCH);
+    }
+
     @Nested
     class classAInOriginalWithPublicApi {
         @BeforeEach

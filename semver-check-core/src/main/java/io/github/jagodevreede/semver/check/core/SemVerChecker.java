@@ -15,6 +15,7 @@ import java.util.function.Function;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static io.github.jagodevreede.semver.check.core.SemVerType.*;
 
@@ -225,29 +226,44 @@ public class SemVerChecker {
     }
 
     private SemVerType getSemVerType(AccessibleObject originalClassMember, Annotation[] annotationsInNew, Annotation[] annotationsInOriginal) {
-        for (Annotation annotationInOriginal : annotationsInOriginal) {
-            boolean foundInNew = false;
-            for (Annotation annotationInNew : annotationsInNew) {
-                if (annotationInOriginal.toString().equals(annotationInNew.toString())) {
-                    foundInNew = true;
-                    break;
-                }
-            }
-            if (!foundInNew) {
-                log.info("Annotation {} is not available on {}", annotationInOriginal.toString(), originalClassMember);
+        Map<String, List<String>> annotationInOriginalByName = Stream.of(annotationsInOriginal)
+                .collect(Collectors.groupingBy(
+                        a -> a.annotationType().getCanonicalName(),
+                        Collectors.mapping(Object::toString, Collectors.toList())
+                ));
+        Map<String, List<String>> annotationInNewByName = Stream.of(annotationsInNew)
+                .collect(Collectors.groupingBy(
+                        a -> a.annotationType().getCanonicalName(),
+                        Collectors.mapping(Object::toString, Collectors.toList())
+                ));
+        for (Map.Entry<String, List<String>> annotationsInOriginalEntries : annotationInOriginalByName.entrySet()) {
+            List<String> sameAnnotationsInNew = annotationInNewByName.get(annotationsInOriginalEntries.getKey());
+            if (sameAnnotationsInNew == null) {
+                log.info("Annotation {} is no longer available on {}", annotationsInOriginalEntries.getKey(), originalClassMember);
                 return configuration.getAnnotationRemovedStrategy();
             }
-        }
-        for (Annotation annotationInNew : annotationsInNew) {
-            boolean foundInOriginal = false;
-            for (Annotation annotationInOriginal : annotationsInOriginal) {
-                if (annotationInOriginal.toString().equals(annotationInNew.toString())) {
-                    foundInOriginal = true;
-                    break;
-                }
+            if (annotationsInOriginalEntries.getValue().size() > sameAnnotationsInNew.size()) {
+                log.info("An annotation {} is has been removed on {}", annotationsInOriginalEntries.getKey(), originalClassMember);
+                return configuration.getAnnotationRemovedStrategy();
             }
-            if (!foundInOriginal) {
-                log.info("Annotation {} is has been added on {}", annotationInNew.toString(), originalClassMember);
+            if (annotationsInOriginalEntries.getValue().size() < sameAnnotationsInNew.size()) {
+                log.info("An annotation {} is has been added on {}", annotationsInOriginalEntries.getKey(), originalClassMember);
+                return configuration.getAnnotationAddedStrategy();
+            }
+            List<String> differences = annotationsInOriginalEntries.getValue().stream()
+                    .filter(element -> !sameAnnotationsInNew.contains(element))
+                    .collect(Collectors.toList());
+            if (!differences.isEmpty()) {
+                differences.forEach(difference -> {
+                    log.info("Annotation {} is has been changed on {}", difference, originalClassMember);
+                });
+                return PATCH;
+            }
+        }
+        for (Map.Entry<String, List<String>> annotationsInNewEntries : annotationInNewByName.entrySet()) {
+            List<String> sameAnnotationsInOriginal = annotationInOriginalByName.get(annotationsInNewEntries.getKey());
+            if (sameAnnotationsInOriginal == null) {
+                log.info("Annotation {} is has been added on {}", annotationsInNewEntries.getKey(), originalClassMember);
                 return configuration.getAnnotationAddedStrategy();
             }
         }

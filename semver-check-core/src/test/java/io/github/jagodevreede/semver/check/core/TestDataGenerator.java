@@ -7,8 +7,8 @@ import javax.tools.SimpleJavaFileObject;
 import javax.tools.ToolProvider;
 import java.io.*;
 import java.net.URI;
-import java.nio.file.FileSystem;
 import java.nio.file.*;
+import java.nio.file.FileSystem;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -80,14 +80,14 @@ public class TestDataGenerator {
         URI uri = URI.create("jar:file:" + jarFile.getAbsolutePath());
 
         try (FileSystem zipfs = FileSystems.newFileSystem(uri, env)) {
-            Path externalTxtFile = Paths.get(className + extension);
+            Path externalFile = Paths.get(className + extension);
             Path folderToPlaceIn = zipfs.getPath(packageFolder);
             Path pathInZipfile = zipfs.getPath(packageFolder + className + extension);
 
             createFolders(folderToPlaceIn);
 
-            Files.copy(externalTxtFile, pathInZipfile, StandardCopyOption.REPLACE_EXISTING);
-            Files.delete(externalTxtFile);
+            Files.copy(externalFile, pathInZipfile, StandardCopyOption.REPLACE_EXISTING);
+            Files.delete(externalFile);
         }
     }
 
