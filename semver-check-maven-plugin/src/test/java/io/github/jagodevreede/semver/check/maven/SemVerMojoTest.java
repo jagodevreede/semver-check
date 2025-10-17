@@ -4,7 +4,6 @@ import io.github.jagodevreede.semver.check.core.SemVerType;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.handler.DefaultArtifactHandler;
-import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -31,8 +30,6 @@ class SemVerMojoTest {
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     MavenProject project;
 
-    @Mock
-    ArtifactMetadataSource artifactMetadataSource;
     @Mock
     RepositorySystem repoSystem;
 
