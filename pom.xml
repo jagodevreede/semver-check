@@ -43,7 +43,7 @@
         <slf4j.version>2.0.17</slf4j.version>
         <mockito.version>5.20.0</mockito.version>
         <assertj.version>3.27.6</assertj.version>
-        <junit.version>5.14.0</junit.version>
+        <junit.version>6.0.0</junit.version>
         <jacoco-maven-plugin.version>0.8.14</jacoco-maven-plugin.version>
     </properties>
 
