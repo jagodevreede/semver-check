@@ -95,6 +95,27 @@ class SemVerCheckerGeneratedTest {
         }
 
         @Test
+        void changedMethodSignatureReturnType() throws Exception {
+            var gen = new TestDataGenerator("ClassA");
+            gen.add("public int somethingYouShouldSee() { return 1; }");
+            gen.compileClass();
+            gen.addClassToJar(jarAsChanged);
+
+            check(MINOR);
+            checkReversed(MAJOR);
+        }
+
+        @Test
+        void protectedMethodToPublic() throws Exception {
+            var gen = new TestDataGenerator("ClassA");
+            gen.add("protected void somethingYouShouldSee() {}");
+            gen.compileClass();
+            gen.addClassToJar(jarAsChanged);
+
+            checkReversed(MINOR);
+        }
+
+        @Test
         void addedAnnotationToMethod() throws Exception {
             var gen = new TestDataGenerator("ClassA");
             gen.add("@Deprecated");

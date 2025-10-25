@@ -199,7 +199,19 @@ public class SemVerChecker {
     private <M extends AccessibleObject> SemVerType getSemVerType(Class originalClass, Map<M, Annotation[]> originalClassMembers, Map<M, Annotation[]> inNewJarMembers) {
         SemVerType maxChange = NONE;
         for (M originalClassMember : originalClassMembers.keySet()) {
-            M memberInNew = getMemberInOther(originalClassMember, inNewJarMembers);
+            M memberInNew = getMemberInOther(originalClassMember, inNewJarMembers, false);
+            if (memberInNew instanceof Method) {
+                Method originalMethod = (Method) originalClassMember;
+                Method classMethod = (Method) memberInNew;
+                if (!classMethod.getReturnType().equals(originalMethod.getReturnType())) {
+                    if ("void".equals(originalMethod.getReturnType().getName())) {
+                        maxChange = SemVerType.updateResult(maxChange, MINOR);
+                    } else {
+                        log.info("{} '{}' no longer exists in {}", originalClassMember.getClass().getSimpleName(), originalClassMember, originalClass.getName());
+                        return MAJOR;
+                    }
+                }
+            }
             if (memberInNew == null) {
                 log.info("{} '{}' no longer exists in {}", originalClassMember.getClass().getSimpleName(), originalClassMember, originalClass.getName());
                 return MAJOR;
@@ -216,7 +228,7 @@ public class SemVerChecker {
         }
 
         for (M memberInNew : inNewJarMembers.keySet()) {
-            M originalClassMember = getMemberInOther(memberInNew, originalClassMembers);
+            M originalClassMember = getMemberInOther(memberInNew, originalClassMembers, true);
             if (originalClassMember == null) {
                 log.info("{} '{}' in {} is new", memberInNew.getClass().getSimpleName(), memberInNew, originalClass.getName());
                 return MINOR;
@@ -270,10 +282,24 @@ public class SemVerChecker {
         return NONE;
     }
 
-    private <M extends AccessibleObject> M getMemberInOther(M originalClassMember, Map<M, Annotation[]> inNewJarMembers) {
-        for (M method : inNewJarMembers.keySet()) {
-            if (originalClassMember.toString().equals(method.toString())) {
-                return method;
+    private <M extends AccessibleObject> M getMemberInOther(M originalClassMember, Map<M, Annotation[]> inNewJarMembers, boolean ignoreReturnType) {
+        for (M classMember : inNewJarMembers.keySet()) {
+            if (!ignoreReturnType && classMember instanceof Method && originalClassMember instanceof Method) {
+                Method originalMethod = (Method) originalClassMember;
+                Method classMethod = (Method) classMember;
+                if (originalMethod.getName().equals(classMethod.getName())) {
+                    Set<Class<?>> originalParameterTypes = Set.of(originalMethod.getParameterTypes());
+                    Set<Class<?>> classParameterTypes = Set.of(classMethod.getParameterTypes());
+                    if (originalParameterTypes.size() == classParameterTypes.size() && originalParameterTypes.containsAll(classParameterTypes)) {
+                        Set<Class<?>> originalMethodExceptionTypes = Set.of(originalMethod.getExceptionTypes());
+                        Set<Class<?>> classMethodExceptionTypes = Set.of(classMethod.getExceptionTypes());
+                        if (originalMethodExceptionTypes.size() == classMethodExceptionTypes.size() && originalMethodExceptionTypes.containsAll(classMethodExceptionTypes)) {
+                            return classMember;
+                        }
+                    }
+                }
+            } else if (originalClassMember.toString().equals(classMember.toString())) {
+                return classMember;
             }
         }
         return null;
