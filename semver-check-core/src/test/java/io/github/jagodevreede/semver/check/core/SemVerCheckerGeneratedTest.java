@@ -73,6 +73,22 @@ class SemVerCheckerGeneratedTest {
         checkReversed(PATCH);
     }
 
+    @Test
+    void changedMethodSignatureReturnTypeGenericListType() throws Exception {
+        var gen = new TestDataGenerator("ClassB", true, "java.util.List");
+        gen.add("public List<Integer> somethingYouShouldSee() { return List.of(); }");
+        gen.compileClass();
+        gen.addClassToJar(jarAsOriginal);
+
+        gen = new TestDataGenerator("ClassB", true, "java.util.List");
+        gen.add("public List<Long> somethingYouShouldSee() { return List.of(); }");
+        gen.compileClass();
+        gen.addClassToJar(jarAsChanged);
+
+        check(MAJOR);
+        checkReversed(MAJOR);
+    }
+
     @Nested
     class classAInOriginalWithPublicApi {
         @BeforeEach

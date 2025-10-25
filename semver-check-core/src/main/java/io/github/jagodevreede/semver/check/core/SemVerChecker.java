@@ -210,6 +210,11 @@ public class SemVerChecker {
                         log.info("{} '{}' no longer exists in {}", originalClassMember.getClass().getSimpleName(), originalClassMember, originalClass.getName());
                         return MAJOR;
                     }
+                } else {
+                    if (!Objects.equals(classMethod.getGenericReturnType(), originalMethod.getGenericReturnType())) {
+                        log.info("Generics of return type in {} '{}' in {} have been changed from {} to {}", originalClassMember.getClass().getSimpleName(), originalClassMember, originalClass.getName(), nullSafeToString(originalMethod.getGenericReturnType()), nullSafeToString(classMethod.getGenericReturnType()));
+                        return MAJOR;
+                    }
                 }
             }
             if (memberInNew == null) {
@@ -235,6 +240,13 @@ public class SemVerChecker {
             }
         }
         return NONE;
+    }
+
+    private static String nullSafeToString(Object value) {
+        if (value == null) {
+            return null;
+        }
+        return value.toString();
     }
 
     private SemVerType getSemVerType(AccessibleObject originalClassMember, Annotation[] annotationsInNew, Annotation[] annotationsInOriginal) {

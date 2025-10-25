@@ -30,9 +30,16 @@ public class TestDataGenerator {
         initClass(className, true);
     }
 
-    TestDataGenerator(String className, boolean isPublic) {
+    TestDataGenerator(String className, boolean isPublic, String... importStrings) {
         this.packageName = "";
         this.className = className;
+        if (importStrings != null) {
+            for (String importString : importStrings) {
+                out.print("import ");
+                out.print(importString);
+                out.println(";");
+            }
+        }
         initClass(className,isPublic);
     }
 
