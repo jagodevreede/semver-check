@@ -84,6 +84,17 @@ class SemVerCheckerGeneratedTest {
         }
 
         @Test
+        void changedMethodSignatureAddedThrows () throws Exception {
+            var gen = new TestDataGenerator("ClassA");
+            gen.add("public void somethingYouShouldSee() throws Exception {}");
+            gen.compileClass();
+            gen.addClassToJar(jarAsChanged);
+
+            check(MAJOR);
+            checkReversed(MAJOR);
+        }
+
+        @Test
         void addedAnnotationToMethod() throws Exception {
             var gen = new TestDataGenerator("ClassA");
             gen.add("@Deprecated");
