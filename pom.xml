@@ -56,13 +56,6 @@
         <module>semver-check-maven-plugin-multi-module-example</module>
     </modules>
 
-    <distributionManagement>
-        <snapshotRepository>
-            <id>ossrh</id>
-            <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
-    </distributionManagement>
-
     <dependencyManagement>
         <dependencies>
             <dependency>
