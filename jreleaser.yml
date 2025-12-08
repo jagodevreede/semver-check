@@ -70,16 +70,12 @@ release:
           - 'github-actions[bot]'
       replacers:
         - search: '\[chore\] '
-
 deploy:
   maven:
-    nexus2:
-      maven-central:
-        active: ALWAYS
-        url: https://ossrh-staging-api.central.sonatype.com/service/local
+    mavenCentral:
+      release-deploy:
+        active: RELEASE
+        url: https://central.sonatype.com/api/v1/publisher
         applyMavenCentralRules: true
-        snapshotSupported: false
-        closeRepository: true
-        releaseRepository: false
         stagingRepositories:
           - target/staging-deploy
