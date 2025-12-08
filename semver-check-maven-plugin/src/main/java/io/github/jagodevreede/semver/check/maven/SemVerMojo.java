@@ -107,17 +107,17 @@ public class SemVerMojo extends AbstractMojo {
     /**
      * Strategy to use when an annotation is added.
      * Possible values: MAJOR, MINOR, PATCH, NONE.
-     * Default is MINOR.
+     * Default is PATCH.
      */
-    @Parameter(property = "annotationAddedStrategy", defaultValue = "MINOR")
+    @Parameter(property = "annotationAddedStrategy", defaultValue = "PATCH")
     SemVerType annotationAddedStrategy;
 
     /**
      * Strategy to use when an annotation is removed.
      * Possible values: MAJOR, MINOR, PATCH, NONE.
-     * Default is MAJOR.
+     * Default is PATCH.
      */
-    @Parameter(property = "annotationRemovedStrategy", defaultValue = "MAJOR")
+    @Parameter(property = "annotationRemovedStrategy", defaultValue = "PATCH")
     SemVerType annotationRemovedStrategy;
 
     /**
