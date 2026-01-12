@@ -300,12 +300,12 @@ public class SemVerChecker {
                 Method originalMethod = (Method) originalClassMember;
                 Method classMethod = (Method) classMember;
                 if (originalMethod.getName().equals(classMethod.getName())) {
-                    Set<Class<?>> originalParameterTypes = Set.of(originalMethod.getParameterTypes());
-                    Set<Class<?>> classParameterTypes = Set.of(classMethod.getParameterTypes());
-                    if (originalParameterTypes.size() == classParameterTypes.size() && originalParameterTypes.containsAll(classParameterTypes)) {
-                        Set<Class<?>> originalMethodExceptionTypes = Set.of(originalMethod.getExceptionTypes());
-                        Set<Class<?>> classMethodExceptionTypes = Set.of(classMethod.getExceptionTypes());
-                        if (originalMethodExceptionTypes.size() == classMethodExceptionTypes.size() && originalMethodExceptionTypes.containsAll(classMethodExceptionTypes)) {
+                    List<Class<?>> originalParameterTypes = List.of(originalMethod.getParameterTypes());
+                    List<Class<?>> classParameterTypes = List.of(classMethod.getParameterTypes());
+                    if (allMatch(originalParameterTypes, classParameterTypes)) {
+                        List<Class<?>> originalMethodExceptionTypes = List.of(originalMethod.getExceptionTypes());
+                        List<Class<?>> classMethodExceptionTypes = List.of(classMethod.getExceptionTypes());
+                        if (allMatch(originalMethodExceptionTypes, classMethodExceptionTypes)) {
                             return classMember;
                         }
                     }
@@ -315,6 +315,20 @@ public class SemVerChecker {
             }
         }
         return null;
+    }
+
+    private boolean allMatch(List<Class<?>> originalParameterTypes, List<Class<?>> classParameterTypes) {
+        if (originalParameterTypes.size() != classParameterTypes.size()) {
+            return false;
+        }
+        for (int i = 0; i < originalParameterTypes.size(); i++) {
+            Class<?> origClass = originalParameterTypes.get(i);
+            Class<?> otherClass = classParameterTypes.get(i);
+            if (!origClass.equals(otherClass)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private Set<ClassInformation> getClassesInJar(JarFile jarFile) throws IOException {

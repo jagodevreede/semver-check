@@ -57,6 +57,102 @@ class SemVerCheckerGeneratedTest {
     }
 
     @Test
+    void changedParameterName() throws Exception {
+        var gen = new TestDataGenerator("ClassB");
+        gen.add("public void somethingYouShouldSee(String a) {}");
+        gen.compileClass();
+        gen.addClassToJar(jarAsOriginal);
+
+        gen = new TestDataGenerator("ClassB");
+        gen.add("public void somethingYouShouldSee(String b) {}");
+        gen.compileClass();
+        gen.addClassToJar(jarAsChanged);
+
+        check(NONE);
+        checkReversed(NONE);
+    }
+
+    @Test
+    void changedReturnType() throws Exception {
+        var gen = new TestDataGenerator("ClassB");
+        gen.add("public void somethingYouShouldSee() {}");
+        gen.compileClass();
+        gen.addClassToJar(jarAsOriginal);
+
+        gen = new TestDataGenerator("ClassB");
+        gen.add("public boolean somethingYouShouldSee() { return false; }");
+        gen.compileClass();
+        gen.addClassToJar(jarAsChanged);
+
+        check(MINOR);
+        checkReversed(MAJOR);
+    }
+
+    @Test
+    void changedThrows() throws Exception {
+        var gen = new TestDataGenerator("ClassB");
+        gen.add("public void somethingYouShouldSee(String a) throws Exception {}");
+        gen.compileClass();
+        gen.addClassToJar(jarAsOriginal);
+
+        gen = new TestDataGenerator("ClassB");
+        gen.add("public void somethingYouShouldSee(String b) throws java.io.IOException {}");
+        gen.compileClass();
+        gen.addClassToJar(jarAsChanged);
+
+        check(MAJOR);
+        checkReversed(MAJOR);
+    }
+
+    @Test
+    void removedThrows() throws Exception {
+        var gen = new TestDataGenerator("ClassB");
+        gen.add("public void somethingYouShouldSee(String a) {}");
+        gen.compileClass();
+        gen.addClassToJar(jarAsOriginal);
+
+        gen = new TestDataGenerator("ClassB");
+        gen.add("public void somethingYouShouldSee(String a) throws java.io.IOException {}");
+        gen.compileClass();
+        gen.addClassToJar(jarAsChanged);
+
+        check(MAJOR);
+        checkReversed(MAJOR);
+    }
+
+    @Test
+    void changedMultipleParameters() throws Exception {
+        var gen = new TestDataGenerator("ClassB");
+        gen.add("public void somethingYouShouldSee(String a, String b) {}");
+        gen.compileClass();
+        gen.addClassToJar(jarAsOriginal);
+
+        gen = new TestDataGenerator("ClassB");
+        gen.add("public void somethingYouShouldSee(String a, int b) {}");
+        gen.compileClass();
+        gen.addClassToJar(jarAsChanged);
+
+        check(MAJOR);
+        checkReversed(MAJOR);
+    }
+
+    @Test
+    void changedMultipleParameters_swap() throws Exception {
+        var gen = new TestDataGenerator("ClassB");
+        gen.add("public void somethingYouShouldSee(int b, String a) {}");
+        gen.compileClass();
+        gen.addClassToJar(jarAsOriginal);
+
+        gen = new TestDataGenerator("ClassB");
+        gen.add("public void somethingYouShouldSee(String a, int b) {}");
+        gen.compileClass();
+        gen.addClassToJar(jarAsChanged);
+
+        check(MAJOR);
+        checkReversed(MAJOR);
+    }
+
+    @Test
     void changedAnnotation() throws Exception {
         var gen = new TestDataGenerator("ClassB");
         gen.add("@Deprecated(since = \"1\")");
