@@ -203,7 +203,7 @@ public class SemVerChecker {
             if (memberInNew instanceof Method) {
                 Method originalMethod = (Method) originalClassMember;
                 Method classMethod = (Method) memberInNew;
-                if (!classMethod.getReturnType().equals(originalMethod.getReturnType())) {
+                if (!classMethod.getReturnType().getName().equals(originalMethod.getReturnType().getName())) {
                     if ("void".equals(originalMethod.getReturnType().getName())) {
                         maxChange = SemVerType.updateResult(maxChange, MINOR);
                     } else {
@@ -211,7 +211,7 @@ public class SemVerChecker {
                         return MAJOR;
                     }
                 } else {
-                    if (!Objects.equals(classMethod.getGenericReturnType(), originalMethod.getGenericReturnType())) {
+                    if (!Objects.equals(classMethod.getGenericReturnType().getTypeName(), originalMethod.getGenericReturnType().getTypeName())) {
                         log.info("Generics of return type in {} '{}' in {} have been changed from {} to {}", originalClassMember.getClass().getSimpleName(), originalClassMember, originalClass.getName(), nullSafeToString(originalMethod.getGenericReturnType()), nullSafeToString(classMethod.getGenericReturnType()));
                         return MAJOR;
                     }
