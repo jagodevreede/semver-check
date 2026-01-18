@@ -211,9 +211,14 @@ public class SemVerChecker {
                         return MAJOR;
                     }
                 } else {
-                    if (!Objects.equals(classMethod.getGenericReturnType().getTypeName(), originalMethod.getGenericReturnType().getTypeName())) {
-                        log.info("Generics of return type in {} '{}' in {} have been changed from {} to {}", originalClassMember.getClass().getSimpleName(), originalClassMember, originalClass.getName(), nullSafeToString(originalMethod.getGenericReturnType()), nullSafeToString(classMethod.getGenericReturnType()));
-                        return MAJOR;
+                    try {
+                        if (!Objects.equals(classMethod.getGenericReturnType().getTypeName(), originalMethod.getGenericReturnType().getTypeName())) {
+                            log.info("Generics of return type in {} '{}' in {} have been changed from {} to {}", originalClassMember.getClass().getSimpleName(), originalClassMember, originalClass.getName(), nullSafeToString(originalMethod.getGenericReturnType()), nullSafeToString(classMethod.getGenericReturnType()));
+                            return MAJOR;
+                        }
+                    } catch (Exception e) {
+                        // There is actually not a good way to get generic information, only if it's about classes already loaded
+                        log.trace("Unable to get generic information", e);
                     }
                 }
             }
@@ -322,8 +327,8 @@ public class SemVerChecker {
             return false;
         }
         for (int i = 0; i < originalParameterTypes.size(); i++) {
-            Class<?> origClass = originalParameterTypes.get(i);
-            Class<?> otherClass = classParameterTypes.get(i);
+            String origClass = originalParameterTypes.get(i).getName();
+            String otherClass = classParameterTypes.get(i).getName();
             if (!origClass.equals(otherClass)) {
                 return false;
             }
