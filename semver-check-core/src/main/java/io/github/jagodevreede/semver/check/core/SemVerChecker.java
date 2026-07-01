@@ -300,7 +300,11 @@ public class SemVerChecker {
     }
 
     private <M extends AccessibleObject> M getMemberInOther(M originalClassMember, Map<M, Annotation[]> inNewJarMembers, boolean ignoreReturnType) {
+        List<M> result = new ArrayList<>();
         for (M classMember : inNewJarMembers.keySet()) {
+            if (originalClassMember.toString().equals(classMember.toString())) {
+                return classMember;
+            }
             if (!ignoreReturnType && classMember instanceof Method && originalClassMember instanceof Method) {
                 Method originalMethod = (Method) originalClassMember;
                 Method classMethod = (Method) classMember;
@@ -311,15 +315,23 @@ public class SemVerChecker {
                         List<Class<?>> originalMethodExceptionTypes = List.of(originalMethod.getExceptionTypes());
                         List<Class<?>> classMethodExceptionTypes = List.of(classMethod.getExceptionTypes());
                         if (allMatch(originalMethodExceptionTypes, classMethodExceptionTypes)) {
-                            return classMember;
+                            result.add(classMember);
+                            if (originalMethod.getReturnType().equals(classMethod.getReturnType())) {
+                                return classMember;
+                            }
                         }
                     }
                 }
-            } else if (originalClassMember.toString().equals(classMember.toString())) {
-                return classMember;
             }
         }
-        return null;
+        if (result.isEmpty()) {
+            return null;
+        }
+        if (result.size() == 1) {
+            return result.get(0);
+        }
+        log.warn("Multiple members found for {}: {} using first result", originalClassMember, result.stream().map(Object::toString).collect(Collectors.joining(", ")));
+        return result.get(0);
     }
 
     private boolean allMatch(List<Class<?>> originalParameterTypes, List<Class<?>> classParameterTypes) {
