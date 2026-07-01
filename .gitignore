@@ -8,3 +8,9 @@ out/
 *.log
 *.iml
 JRELEASER_VERSION
+
+#Eclipse
+.project
+.classpath
+.factorypath
+.settings/
