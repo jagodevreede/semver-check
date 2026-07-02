@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component-set>
+    <components>
+        <component>
+            <role>io.github.jagodevreede.semver.check.maven.BuildDataStore</role>
+            <role-hint>default</role-hint>
+            <implementation>io.github.jagodevreede.semver.check.maven.BuildDataStore</implementation>
+            <instantiation-strategy>singleton</instantiation-strategy>
+        </component>
+    </components>
+</component-set>

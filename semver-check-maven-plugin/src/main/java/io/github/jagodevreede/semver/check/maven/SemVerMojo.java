@@ -14,6 +14,7 @@ import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -41,12 +42,17 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static io.github.jagodevreede.semver.check.core.SemVerType.NONE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.maven.RepositoryUtils.toArtifact;
 
 @Mojo(name = "check", defaultPhase = LifecyclePhase.VERIFY, threadSafe = true, requiresDependencyResolution = ResolutionScope.COMPILE)
 public class SemVerMojo extends AbstractMojo {
     private static final List<String> RESOLVABLE_SCOPES = List.of("compile", "runtime");
+
+    @Component
+    private BuildDataStore dataStore;
+
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     MavenProject project;
 
@@ -87,7 +93,8 @@ public class SemVerMojo extends AbstractMojo {
     boolean allowHigherVersions;
 
     /**
-     * The name of the file where the next version in plain text will be written to. This file is located in the `target` folder. If the property is left empty then no file will be created
+     * The name of the file where the next version in plain text will be written to. This file is located in the `target` folder. If the property is left empty then no
+     * file will be created
      */
     @Parameter(property = "outputFileName", defaultValue = "nextVersion.txt")
     String outputFileName;
@@ -145,6 +152,18 @@ public class SemVerMojo extends AbstractMojo {
     @Parameter(property = "excludeDependencies")
     String[] excludeDependencies;
 
+    /**
+     * Location of a Bill of Materials file that holds dependency information about modules in this project, will be auto detected by default.
+     */
+    @Parameter(property = "bomPath")
+    private String bomPath;
+
+    /**
+     * If set to `true` then the build will skip the execution of this plugin
+     */
+    @Parameter(property = "semver.skip.deploy", defaultValue = "false")
+    boolean skipDeploy;
+
     private final RepositorySystem repoSystem;
 
     private final DependencyResolver dependencyResolver;
@@ -176,6 +195,7 @@ public class SemVerMojo extends AbstractMojo {
             haltOnCondition(project == null, "Unable to get project information");
             if ("pom".equals(project.getPackaging())) {
                 getLog().info("No semantic versioning information for pom packaging");
+                determineMultiModuleInformation(SemVerType.NONE, project.getVersion());
                 return;
             }
             Artifact artifact = project.getArtifact();
@@ -185,7 +205,12 @@ public class SemVerMojo extends AbstractMojo {
 
             haltOnCondition(!workingFile.isFile(), "Unable to read file " + workingFile);
 
-            determineVersionInformation(artifact, workingFile);
+            final SemVerType semVerType = determineVersionInformation(artifact, workingFile);
+            if (semVerType == SemVerType.NONE && skipDeploy) {
+                getLog().info("No version change detected, skipping deploy as skipDeploy is set to true");
+                project.getProperties().setProperty("maven.install.skip", "true");
+                project.getProperties().setProperty("maven.deploy.skip", "true");
+            }
         } catch (VersionRangeResolutionException | IOException e) {
             throw new MojoExecutionException(e.getMessage());
         } catch (HaltException he) {
@@ -193,7 +218,7 @@ public class SemVerMojo extends AbstractMojo {
         }
     }
 
-    private void determineVersionInformation(Artifact artifact, File fileInTarget) throws IOException, MojoExecutionException, VersionRangeResolutionException {
+    private SemVerType determineVersionInformation(Artifact artifact, File fileInTarget) throws IOException, MojoExecutionException, VersionRangeResolutionException {
         if (getLog().isDebugEnabled() && excludePackages != null) {
             getLog().debug("Excluded packages are " + getExcludePackages());
         }
@@ -226,15 +251,64 @@ public class SemVerMojo extends AbstractMojo {
                 }
             }
         }
+        List<VersionInfo> versionInfoOfOtherModules = dataStore.getValues();
+
+        if (NONE.equals(semVerType) &&
+                project.getDependencies().stream()
+                        // We only need dependecies that are also modules of this multi module project, and have a semver change
+                        .anyMatch(dep -> versionInfoOfOtherModules.stream()
+                                .anyMatch(v -> !NONE.equals(v.getSemVerType()) && v.getGroupId().equals(dep.getGroupId()) && v.getArtifactId()
+                                        .equals(dep.getArtifactId())))) {
+            // At this point one of our upstream dependencies has an update
+            getLog().info("One or more of the upstream module dependencies has a version change, bumping patch version");
+            semVerType = SemVerType.PATCH;
+        }
         String nextVersion = getNextVersion(artifactVersion, semVerType);
         SemVerType currentSemVerType = getCurrentSemVerType(artifactVersion, new DefaultArtifactVersion(artifact.getVersion()));
         getLog().info("Determined SemVer type as " + semVerType.toLowerCaseString() + " and is currently " + currentSemVerType.toLowerCaseString() +
                 ", next version should be: " + nextVersion);
         failOnIncorrectVersion(semVerType, currentSemVerType);
+        determineMultiModuleInformation(semVerType, nextVersion);
         if (SemVerType.NONE.equals(semVerType) && !writeFileOnNone) {
-            return;
+            return semVerType;
         }
         writeOutputFile(nextVersion);
+        return semVerType;
+    }
+
+    private void determineMultiModuleInformation(final SemVerType semVerType, final String nextVersion) {
+        File rootPomFile = project.getFile();
+
+        String packaging = project.getPackaging();
+        if (packaging == null) {
+            packaging = "jar";
+        }
+
+        if (bomPath != null && !bomPath.trim().isEmpty()) {
+            dataStore.setBomArtifactId(bomPath);
+        } else if ("pom".equals(packaging) && hasNoModules() && hasDependencyManagement()) {
+            dataStore.setBomArtifactId(project.getFile().getAbsolutePath());
+        }
+
+        dataStore.store(project.getGroupId() + ":" + project.getArtifactId(),
+                new VersionInfo(project.getGroupId(),
+                        project.getArtifactId(),
+                        nextVersion,
+                        semVerType,
+                        project.getVersion(),
+                        packaging,
+                        rootPomFile,
+                        project.getDependencies()));
+    }
+
+    private boolean hasNoModules() {
+        return project.getModules() == null || project.getModules().isEmpty();
+    }
+
+    private boolean hasDependencyManagement() {
+        return project.getDependencyManagement() != null &&
+                project.getDependencyManagement().getDependencies() != null &&
+                !project.getDependencyManagement().getDependencies().isEmpty();
     }
 
     private SemVerType compareDependencies(Artifact artifact, String artifactVersion) throws DependencyResolverException {
@@ -446,8 +520,7 @@ public class SemVerMojo extends AbstractMojo {
         return result[0];
     }
 
-    /// Visible for testing
-    String getNextVersion(String version, SemVerType semVerType) {
+    static String getNextVersion(String version, SemVerType semVerType) {
         final ArtifactVersion artifactVersion = new DefaultArtifactVersion(version);
         String nextVersion = "?";
         switch (semVerType) {
