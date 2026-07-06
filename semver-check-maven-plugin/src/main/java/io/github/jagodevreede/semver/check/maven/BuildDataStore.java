@@ -10,19 +10,19 @@ import org.codehaus.plexus.component.annotations.Component;
 
 @Component(role = BuildDataStore.class)
 public class BuildDataStore {
-    private String bomArtifactId;
+    private BomInformation bomInformation;
     private final Map<String, VersionInfo> moduleData = new ConcurrentHashMap<>();
 
     public void store(String artifactId, VersionInfo data) {
         moduleData.put(artifactId, data);
     }
 
-    public String getBomArtifactId() {
-        return bomArtifactId;
+    public BomInformation getBomInformation() {
+        return bomInformation;
     }
 
-    public void setBomArtifactId(final String bomArtifactId) {
-        this.bomArtifactId = bomArtifactId;
+    public void setBomInformation(final BomInformation bomInformation) {
+        this.bomInformation = bomInformation;
     }
 
     public Map<String, VersionInfo> getAll() {

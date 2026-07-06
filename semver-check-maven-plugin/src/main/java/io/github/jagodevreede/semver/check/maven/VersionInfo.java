@@ -13,11 +13,18 @@ public class VersionInfo {
     private String nextVersion;
     private SemVerType semVerType;
     private final String version;
+    private final String lastReleasedVersion;
     private final String packaging;
     private final File pomFile;
     private final List<Dependency> dependencies;
 
-    public VersionInfo(final String groupId, final String artifactId, final String nextVersion, final SemVerType semVerType, final String version, final String packaging,
+    public VersionInfo(final String groupId,
+                       final String artifactId,
+                       final String nextVersion,
+                       final SemVerType semVerType,
+                       final String version,
+                       final String lastReleasedVersion,
+                       final String packaging,
                        final File pomFile,
                        final List<Dependency> dependencies) {
         this.groupId = groupId;
@@ -25,6 +32,7 @@ public class VersionInfo {
         this.nextVersion = nextVersion;
         this.semVerType = semVerType;
         this.version = version;
+        this.lastReleasedVersion = lastReleasedVersion;
         this.packaging = packaging;
         this.pomFile = pomFile;
         this.dependencies = dependencies;
@@ -68,6 +76,11 @@ public class VersionInfo {
 
     public void setSemVerType(final SemVerType semVerType) {
         this.semVerType = semVerType;
+    }
+
+    /** Returns null of no last release version */
+    public String getLastReleasedVersion() {
+        return lastReleasedVersion;
     }
 
     @Override

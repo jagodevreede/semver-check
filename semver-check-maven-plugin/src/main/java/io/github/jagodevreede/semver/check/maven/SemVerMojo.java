@@ -1,5 +1,19 @@
 package io.github.jagodevreede.semver.check.maven;
 
+import static io.github.jagodevreede.semver.check.core.SemVerType.NONE;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.maven.RepositoryUtils.toArtifact;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import javax.inject.Inject;
+
 import io.github.jagodevreede.semver.check.core.Configuration;
 import io.github.jagodevreede.semver.check.core.SemVerChecker;
 import io.github.jagodevreede.semver.check.core.SemVerType;
@@ -31,20 +45,6 @@ import org.apache.maven.shared.transfer.dependencies.resolve.DependencyResolverE
 import org.eclipse.aether.resolution.VersionRangeRequest;
 import org.eclipse.aether.resolution.VersionRangeResolutionException;
 import org.eclipse.aether.version.Version;
-
-import javax.inject.Inject;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import static io.github.jagodevreede.semver.check.core.SemVerType.NONE;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.maven.RepositoryUtils.toArtifact;
 
 @Mojo(name = "check", defaultPhase = LifecyclePhase.VERIFY, threadSafe = true, requiresDependencyResolution = ResolutionScope.COMPILE)
 public class SemVerMojo extends AbstractMojo {
@@ -193,12 +193,25 @@ public class SemVerMojo extends AbstractMojo {
         }
         try {
             haltOnCondition(project == null, "Unable to get project information");
+            Artifact artifact = project.getArtifact();
             if ("pom".equals(project.getPackaging())) {
+                List<Version> artifactVersions = getArtifactVersions(artifact);
+                String lastReleasedVersion = null;
+                if (artifactVersions.isEmpty()) {
+                    getLog().info("No other versions available for " + artifact.getGroupId() + ":" + artifact.getArtifactId());
+                } else {
+                    String artifactVersion = artifactVersions.get(artifactVersions.size() - 1).toString();
+                    File fileAttachedToLastKnowVersion = getLastVersion(artifact, artifactVersion);
+                    if (!fileAttachedToLastKnowVersion.exists()) {
+                        getLog().warn("Artifact " + artifactVersion + " has no attached file?");
+                    } else {
+                        lastReleasedVersion = artifactVersion;
+                    }
+                }
                 getLog().info("No semantic versioning information for pom packaging");
-                determineMultiModuleInformation(SemVerType.NONE, project.getVersion());
+                determineMultiModuleInformation(SemVerType.NONE, project.getVersion(), lastReleasedVersion);
                 return;
             }
-            Artifact artifact = project.getArtifact();
             File workingFile = new File(project.getBuild().getDirectory(),
                     project.getBuild().getFinalName() + "." + (artifact.getClassifier() != null ? artifact.getClassifier() : "jar"));
             getLog().debug("Using as original input file: " + workingFile);
@@ -225,6 +238,7 @@ public class SemVerMojo extends AbstractMojo {
         List<Version> artifactVersions = getArtifactVersions(artifact);
         SemVerType semVerType = SemVerType.NONE;
         String artifactVersion;
+        String lastReleasedVersion = null;
         if (artifactVersions.isEmpty()) {
             getLog().info("No other versions available for " + artifact.getGroupId() + ":" + artifact.getArtifactId());
             artifactVersion = artifact.getVersion();
@@ -234,11 +248,14 @@ public class SemVerMojo extends AbstractMojo {
             if (!fileAttachedToLastKnowVersion.exists()) {
                 getLog().warn("Artifact " + artifactVersion + " has no attached file?");
             } else {
+                lastReleasedVersion = artifactVersion;
                 getLog().info("Checking SemVer against last known version " + artifactVersion);
                 List<String> runtimeClasspathElements = project.getArtifacts().stream().map(a -> a.getFile().getAbsolutePath()).collect(Collectors.toList());
                 getLog().debug("Runtime classpath elements are " + String.join(", ", runtimeClasspathElements));
 
-                Configuration configuration = new Configuration(getIncludePackages(), getExcludePackages(), getExcludeFiles(), runtimeClasspathElements, annotationAddedStrategy, annotationRemovedStrategy);
+                Configuration configuration =
+                        new Configuration(getIncludePackages(), getExcludePackages(), getExcludeFiles(), runtimeClasspathElements, annotationAddedStrategy,
+                                annotationRemovedStrategy);
                 SemVerChecker semVerChecker = new SemVerChecker(fileAttachedToLastKnowVersion, fileInTarget, configuration);
                 semVerType = semVerChecker.determineSemVerType();
 
@@ -268,7 +285,7 @@ public class SemVerMojo extends AbstractMojo {
         getLog().info("Determined SemVer type as " + semVerType.toLowerCaseString() + " and is currently " + currentSemVerType.toLowerCaseString() +
                 ", next version should be: " + nextVersion);
         failOnIncorrectVersion(semVerType, currentSemVerType);
-        determineMultiModuleInformation(semVerType, nextVersion);
+        determineMultiModuleInformation(semVerType, nextVersion, lastReleasedVersion);
         if (SemVerType.NONE.equals(semVerType) && !writeFileOnNone) {
             return semVerType;
         }
@@ -276,18 +293,26 @@ public class SemVerMojo extends AbstractMojo {
         return semVerType;
     }
 
-    private void determineMultiModuleInformation(final SemVerType semVerType, final String nextVersion) {
-        File rootPomFile = project.getFile();
-
+    private void determineMultiModuleInformation(final SemVerType semVerType, final String nextVersion, final String lastReleasedVersion) {
         String packaging = project.getPackaging();
         if (packaging == null) {
             packaging = "jar";
         }
 
         if (bomPath != null && !bomPath.trim().isEmpty()) {
-            dataStore.setBomArtifactId(bomPath);
+            if (new File(bomPath).getAbsolutePath().equals(project.getFile().getAbsolutePath())) {
+                dataStore.setBomInformation(new BomInformation(project.getGroupId(), project.getArtifactId(), project.getFile().getAbsolutePath()));
+            } else if (dataStore.getBomInformation() == null || dataStore.getBomInformation().getArtifactId() == null) {
+                dataStore.setBomInformation(new BomInformation(null, null, bomPath));
+            }
+
         } else if ("pom".equals(packaging) && hasNoModules() && hasDependencyManagement()) {
-            dataStore.setBomArtifactId(project.getFile().getAbsolutePath());
+            dataStore.setBomInformation(new BomInformation(project.getGroupId(), project.getArtifactId(), project.getFile().getAbsolutePath()));
+        }
+
+        ArrayList<Dependency> allDependencies = new ArrayList<>(project.getDependencies());
+        if (project.getDependencyManagement() != null && project.getDependencyManagement().getDependencies() != null) {
+            allDependencies.addAll(project.getDependencyManagement().getDependencies());
         }
 
         dataStore.store(project.getGroupId() + ":" + project.getArtifactId(),
@@ -296,9 +321,10 @@ public class SemVerMojo extends AbstractMojo {
                         nextVersion,
                         semVerType,
                         project.getVersion(),
+                        lastReleasedVersion,
                         packaging,
-                        rootPomFile,
-                        project.getDependencies()));
+                        project.getFile(),
+                        allDependencies));
     }
 
     private boolean hasNoModules() {
