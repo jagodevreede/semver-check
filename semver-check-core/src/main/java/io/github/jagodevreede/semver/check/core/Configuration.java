@@ -68,6 +68,10 @@ public class Configuration {
     }
 
     public boolean isFileExcluded(String fileName) {
+        if (fileName.endsWith("META-INF/jandex.idx")) {
+            log.debug("File {} is skipped as it is a jandex index, currently it is always different, semver should not be determined on this file", fileName);
+            return true;
+        }
         for (Pattern excludeFile : getExcludeFiles()) {
             if (excludeFile.matcher(fileName).matches()) {
                 log.debug("File {} is skipped as it is excluded from the check as it in excluded files {}", fileName, excludeFile);
