@@ -68,8 +68,12 @@ public class Configuration {
     }
 
     public boolean isFileExcluded(String fileName) {
-        if (fileName.endsWith("META-INF/jandex.idx")) {
+        if ("META-INF/jandex.idx".equals(fileName)) {
             log.debug("File {} is skipped as it is a jandex index, currently it is always different, semver should not be determined on this file", fileName);
+            return true;
+        }
+        if ("META-INF/MANIFEST.MF".equals(fileName)) {
+            log.debug("File {} is skipped as it is a generated file and holds no value as an 'API'", fileName);
             return true;
         }
         for (Pattern excludeFile : getExcludeFiles()) {
