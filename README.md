@@ -73,6 +73,8 @@ The following configuration options are available:
 | annotationAddedStrategy   | `MINOR`           | Strategy to use when an annotation is added. Possible values: MAJOR, MINOR, PATCH, NONE                                                                                                                             |
 | annotationRemovedStrategy | `MAJOR`           | Strategy to use when an annotation is removed. Possible values: MAJOR, MINOR, PATCH, NONE.                                                                                                                          |
 | multiModuleStrategy       | `HIGHEST`         | Strategy to use when a multi module project is detected. Possible values: `HIGHEST`, `SEMVER`                                                                                                                       |
+| bomPath                   |                   | Location of a Bill of Materials file that holds dependency information about modules in this project, will be auto detected by default.                                                                             |
+| skipDeploy                | `false`           | If set to `true` and no version change is detected, skips both install and deploy for this module.                                                                                                                  |
 
 ## How is the semver type determined
 
