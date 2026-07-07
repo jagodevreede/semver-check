@@ -70,17 +70,13 @@ public class VersionInfo {
         return dependencies;
     }
 
-    public void setNextVersion(final String nextVersion) {
-        this.nextVersion = nextVersion;
-    }
-
-    public void setSemVerType(final SemVerType semVerType) {
-        this.semVerType = semVerType;
-    }
-
     /** Returns null of no last release version */
     public String getLastReleasedVersion() {
         return lastReleasedVersion;
+    }
+
+    VersionInfo withUpdatedInfo(String nextVersion, SemVerType semVerType) {
+        return new VersionInfo(groupId, artifactId, nextVersion, semVerType, version, lastReleasedVersion, packaging, pomFile, dependencies);
     }
 
     @Override

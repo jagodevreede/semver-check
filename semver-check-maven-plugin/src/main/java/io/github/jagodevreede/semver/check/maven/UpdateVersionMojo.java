@@ -14,26 +14,31 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import javax.inject.Inject;
 import javax.xml.stream.XMLStreamException;
 
+import io.github.jagodevreede.semver.check.core.SemVerType;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Profile;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
 
+/**
+ * Updates POM versions based on data collected by the check goal. Use this after running
+ * the check goal in a multi-module build to automatically update all module versions
+ * and inter-module dependency versions.
+ */
 @Mojo(name = "update-version", aggregator = true, threadSafe = true)
 public class UpdateVersionMojo extends AbstractMojo {
 
-    @Component
-    private BuildDataStore dataStore;
+    private final BuildDataStore dataStore;
 
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
@@ -46,8 +51,17 @@ public class UpdateVersionMojo extends AbstractMojo {
     @Parameter(property = "multiModuleStrategy", defaultValue = "HIGHEST")
     MultiModuleStrategy multiModuleStrategy;
 
+    /**
+     * When true, modules with SemVerType.NONE that have no API changes are still released
+     * with a patch version bump. This ensures modules depending on NONE modules are not left behind.
+     */
     @Parameter(property = "setNoneToReleased", defaultValue = "true")
     private boolean setNoneToReleased;
+
+    @Inject
+    public UpdateVersionMojo(BuildDataStore dataStore) {
+        this.dataStore = dataStore;
+    }
 
     @Override
     public void execute() throws MojoExecutionException {
@@ -68,9 +82,9 @@ public class UpdateVersionMojo extends AbstractMojo {
 
             try {
                 if (SEMVER.equals(multiModuleStrategy) && NONE.equals(versionInfo.getSemVerType())) {
-                    getLog().info("No version update needed for " + versionInfo.getArtifactId() + " as it has no semver change.");
+                    getLog().info("- No version update needed for " + versionInfo.getArtifactId() + " as it has no semver change.");
                 } else {
-                    getLog().info("Updating version for " + versionInfo.getArtifactId() + " from " + versionInfo.getVersion() + " to " + nextVersion);
+                    getLog().info("- Updating version for " + versionInfo.getArtifactId() + " from " + versionInfo.getVersion() + " to " + nextVersion);
                     updatePomVersion(versionInfo, nextVersion);
                 }
                 updateOwnDependencies(versionInfo, allData);
@@ -83,34 +97,35 @@ public class UpdateVersionMojo extends AbstractMojo {
     }
 
     private void updateRootPomWithBom() {
-        VersionInfo rootVersionInfo = dataStore.getAll().get(project.getGroupId() + ":" + project.getArtifactId());
+        VersionInfo rootVersionInfo = dataStore.getStored(project.getGroupId() + ":" + project.getArtifactId());
         if (rootVersionInfo == null) {
             getLog().error("Root POM version information not found in BuildDataStore for artifactId: " + project.getGroupId() + ":" + project.getArtifactId());
             return;
         }
         try {
             if (NONE.equals(rootVersionInfo.getSemVerType())) {
-                rootVersionInfo.setSemVerType(PATCH);
                 String nextVersion = getNextVersion(rootVersionInfo.getLastReleasedVersion(), PATCH);
-                rootVersionInfo.setNextVersion(nextVersion);
-                getLog().info("Root POM has no semver change, marking as patch to ensure everything can be released new version is: " + rootVersionInfo.getNextVersion());
-                updatePomVersion(rootVersionInfo, rootVersionInfo.getNextVersion());
+                getLog().info("Root POM has no semver change, marking as patch to ensure everything can be released new version is: " + nextVersion);
+                VersionInfo updatedRoot = rootVersionInfo.withUpdatedInfo(nextVersion, PATCH);
+                dataStore.store(updatedRoot);
+                updatePomVersion(rootVersionInfo, nextVersion);
                 updateOwnDependencies(rootVersionInfo, dataStore.getAll());
             }
             BomInformation bomInfo = dataStore.getBomInformation();
             if (bomInfo != null) {
-                VersionInfo bomVersionInfo = dataStore.getAll().get(bomInfo.getGroupId() + ":" + bomInfo.getArtifactId());
+                VersionInfo bomVersionInfo = dataStore.getStored(bomInfo.getGroupId() + ":" + bomInfo.getArtifactId());
                 if (bomVersionInfo != null) {
+                    String bomNextVersion = bomVersionInfo.getNextVersion();
+                    SemVerType bomSemVerType = bomVersionInfo.getSemVerType();
                     if (NONE.equals(bomVersionInfo.getSemVerType())) {
                         getLog().info("BOM " + bomInfo.getArtifactId() + " has no semver change, marking as patch to ensure everything can be released.");
-                        bomVersionInfo.setSemVerType(PATCH);
-                        String nextVersion = getNextVersion(bomVersionInfo.getLastReleasedVersion(), PATCH);
-                        bomVersionInfo.setNextVersion(nextVersion);
+                        bomNextVersion = getNextVersion(bomVersionInfo.getLastReleasedVersion(), PATCH);
+                        bomSemVerType = PATCH;
                     }
-                    getLog().info("Updating root POM with BOM version for " + bomInfo.getArtifactId() + " to " + bomVersionInfo.getNextVersion());
-                    rootVersionInfo.setNextVersion(bomVersionInfo.getNextVersion());
-                    rootVersionInfo.setSemVerType(bomVersionInfo.getSemVerType());
-                    updatePomVersion(bomVersionInfo, bomVersionInfo.getNextVersion());
+                    getLog().info("Updating root POM with BOM version for " + bomInfo.getArtifactId() + " to " + bomNextVersion);
+                    VersionInfo updatedRoot = rootVersionInfo.withUpdatedInfo(bomNextVersion, bomSemVerType);
+                    dataStore.store(updatedRoot);
+                    updatePomVersion(bomVersionInfo, bomNextVersion);
                     updateOwnDependencies(bomVersionInfo, dataStore.getAll());
                 } else {
                     getLog().warn("BOM information found but no corresponding VersionInfo in BuildDataStore for artifactId: " + bomInfo.getArtifactId());
@@ -137,14 +152,13 @@ public class UpdateVersionMojo extends AbstractMojo {
                             .anyMatch(dep -> values.stream()
                                     .anyMatch(v -> !NONE.equals(v.getSemVerType())))) {
                 // At this point the highest version is a NONE, but we have modules that have changed, need to set this to patch
-                maxVersionInfo.setSemVerType(PATCH);
                 nextVersion = getNextVersion(maxVersionInfo.getLastReleasedVersion(), PATCH);
-                maxVersionInfo.setNextVersion(nextVersion);
                 getLog().info("Module " + maxVersionInfo.getArtifactId()
                         + " has been determined highest version but is not changed, marking as patch to ensure everything can be released new version is: "
-                        + maxVersionInfo.getNextVersion());
+                        + nextVersion);
             }
-            versionInfo.setNextVersion(nextVersion);
+            VersionInfo updated = versionInfo.withUpdatedInfo(nextVersion, versionInfo.getSemVerType());
+            dataStore.store(updated);
         }
         if (SEMVER.equals(multiModuleStrategy)) {
             if (NONE.equals(versionInfo.getSemVerType()) && "pom".equals(versionInfo.getPackaging())) {
@@ -155,12 +169,12 @@ public class UpdateVersionMojo extends AbstractMojo {
                                         .equals(dep.getArtifactId())));
                 if (moduleHasDeclaredDependenciesToOtherModules) {
                     // At this point the highest version is a NONE, but we have modules that have changed, need to set this to patch
-                    versionInfo.setSemVerType(PATCH);
                     String nextVersion = getNextVersion(versionInfo.getLastReleasedVersion(), PATCH);
-                    versionInfo.setNextVersion(nextVersion);
                     getLog().info("Module " + versionInfo.getArtifactId()
                             + " has dependencies or dependency management that as versions marked for release, so this needs to be released as well to version: "
-                            + versionInfo.getNextVersion());
+                            + nextVersion);
+                    VersionInfo updated = versionInfo.withUpdatedInfo(nextVersion, PATCH);
+                    dataStore.store(updated);
                 }
             }
         }
@@ -205,7 +219,7 @@ public class UpdateVersionMojo extends AbstractMojo {
                         String nextOtherVersion = getNextVersionWithSnapshot(otherVersion.getNextVersion(), otherVersion);
                         if (NONE.equals(otherVersion.getSemVerType()) && (SEMVER.equals(multiModuleStrategy)) && otherVersion.getLastReleasedVersion() != null) {
                             if (setNoneToReleased) {
-                                getLog().info("Dependency " + dependency.getGroupId() + ":" + dependency.getArtifactId()
+                                getLog().info("    Dependency " + dependency.getGroupId() + ":" + dependency.getArtifactId()
                                         + " has no semver change, updating to last released version: " + otherVersion.getLastReleasedVersion());
                                 nextOtherVersion = otherVersion.getLastReleasedVersion();
                             } else {
@@ -213,7 +227,7 @@ public class UpdateVersionMojo extends AbstractMojo {
                             }
                         } else {
                             getLog().info(
-                                    "  Dependency " + dependency.getGroupId() + ":" + dependency.getArtifactId() + " updated to " + getNextVersionWithSnapshot(
+                                    "    Dependency " + dependency.getGroupId() + ":" + dependency.getArtifactId() + " updated to " + getNextVersionWithSnapshot(
                                             otherVersion.getNextVersion(), otherVersion));
                         }
                         if (PomHelper.setDependencyVersion(

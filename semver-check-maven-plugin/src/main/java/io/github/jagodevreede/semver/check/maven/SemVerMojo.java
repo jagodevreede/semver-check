@@ -46,12 +46,15 @@ import org.eclipse.aether.resolution.VersionRangeRequest;
 import org.eclipse.aether.resolution.VersionRangeResolutionException;
 import org.eclipse.aether.version.Version;
 
+/**
+ * Checks the semantic version of the current project against previous versions and stores
+ * version information for multi-module builds. Runs during the verify phase.
+ */
 @Mojo(name = "check", defaultPhase = LifecyclePhase.VERIFY, threadSafe = true, requiresDependencyResolution = ResolutionScope.COMPILE)
 public class SemVerMojo extends AbstractMojo {
     private static final List<String> RESOLVABLE_SCOPES = List.of("compile", "runtime");
 
-    @Component
-    private BuildDataStore dataStore;
+    private final BuildDataStore dataStore;
 
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     MavenProject project;
@@ -180,7 +183,8 @@ public class SemVerMojo extends AbstractMojo {
     private final org.eclipse.aether.RepositorySystem aetherRepositorySystem;
 
     @Inject
-    public SemVerMojo(RepositorySystem repoSystem, DependencyResolver dependencyResolver, org.eclipse.aether.RepositorySystem aetherRepositorySystem) {
+    public SemVerMojo(BuildDataStore dataStore, RepositorySystem repoSystem, DependencyResolver dependencyResolver, org.eclipse.aether.RepositorySystem aetherRepositorySystem) {
+        this.dataStore = dataStore;
         this.repoSystem = repoSystem;
         this.dependencyResolver = dependencyResolver;
         this.aetherRepositorySystem = aetherRepositorySystem;
@@ -250,7 +254,9 @@ public class SemVerMojo extends AbstractMojo {
             } else {
                 lastReleasedVersion = artifactVersion;
                 getLog().info("Checking SemVer against last known version " + artifactVersion);
-                List<String> runtimeClasspathElements = project.getArtifacts().stream().map(a -> a.getFile().getAbsolutePath()).collect(Collectors.toList());
+                List<String> runtimeClasspathElements = project.getArtifacts() != null
+                        ? project.getArtifacts().stream().map(a -> a.getFile().getAbsolutePath()).collect(Collectors.toList())
+                        : List.of();
                 getLog().debug("Runtime classpath elements are " + String.join(", ", runtimeClasspathElements));
 
                 Configuration configuration =
@@ -315,16 +321,15 @@ public class SemVerMojo extends AbstractMojo {
             allDependencies.addAll(project.getDependencyManagement().getDependencies());
         }
 
-        dataStore.store(project.getGroupId() + ":" + project.getArtifactId(),
-                new VersionInfo(project.getGroupId(),
-                        project.getArtifactId(),
-                        nextVersion,
-                        semVerType,
-                        project.getVersion(),
-                        lastReleasedVersion,
-                        packaging,
-                        project.getFile(),
-                        allDependencies));
+        dataStore.store(new VersionInfo(project.getGroupId(),
+                project.getArtifactId(),
+                nextVersion,
+                semVerType,
+                project.getVersion(),
+                lastReleasedVersion,
+                packaging,
+                project.getFile(),
+                allDependencies));
     }
 
     private boolean hasNoModules() {
