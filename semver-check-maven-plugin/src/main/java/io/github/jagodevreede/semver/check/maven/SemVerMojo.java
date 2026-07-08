@@ -343,15 +343,16 @@ public class SemVerMojo extends AbstractMojo {
     }
 
     private SemVerType compareDependencies(Artifact artifact, String artifactVersion) throws DependencyResolverException {
-        List<Artifact> artifactDependencies = getArtifactResults(artifact, artifactVersion);
-        List<Dependency> projectDependencies = project.getDependencies().stream()
-                .filter(d -> RESOLVABLE_SCOPES.contains(d.getScope()))
+        ProjectBuildingRequest buildingRequest = createBuildingRequest();
+        List<Artifact> artifactDependencies = getArtifactResults(artifact, artifactVersion, buildingRequest);
+        List<Artifact> localProjectDependencies = getLocalProjectArtifactResults(buildingRequest);
+        List<Artifact> projectDependencies = localProjectDependencies.stream()
                 .filter(d -> !isExcludedDependency(d.getGroupId(), d.getArtifactId()))
                 .collect(Collectors.toList());
 
         for (Artifact artifactResult : artifactDependencies) {
             boolean found = false;
-            for (Dependency projectDependency : projectDependencies) {
+            for (Artifact projectDependency : projectDependencies) {
                 if (projectDependency.getGroupId().equals(artifactResult.getGroupId()) &&
                         projectDependency.getArtifactId().equals(artifactResult.getArtifactId())) {
                     if (!projectDependency.getVersion().equals(artifactResult.getVersion())) {
@@ -368,7 +369,7 @@ public class SemVerMojo extends AbstractMojo {
             }
         }
 
-        for (Dependency projectDependency : projectDependencies) {
+        for (Artifact projectDependency : projectDependencies) {
             boolean found = false;
             for (Artifact artifactResult : artifactDependencies) {
                 if (projectDependency.getGroupId().equals(artifactResult.getGroupId()) &&
@@ -399,19 +400,18 @@ public class SemVerMojo extends AbstractMojo {
         return false;
     }
 
-    private List<Artifact> getArtifactResults(Artifact artifact, String artifactVersion) throws DependencyResolverException {
+    private ProjectBuildingRequest createBuildingRequest() {
         List<ArtifactRepository> repoList = new ArrayList<>(remoteArtifactRepositories);
-
-        ProjectBuildingRequest buildingRequest =
-                new DefaultProjectBuildingRequest(mavenSession.getProjectBuildingRequest());
-
+        ProjectBuildingRequest buildingRequest = new DefaultProjectBuildingRequest(mavenSession.getProjectBuildingRequest());
         Settings settings = mavenSession.getSettings();
         repoSystem.injectMirror(repoList, settings.getMirrors());
         repoSystem.injectProxy(repoList, settings.getProxies());
         repoSystem.injectAuthentication(repoList, settings.getServers());
-
         buildingRequest.setRemoteRepositories(repoList);
+        return buildingRequest;
+    }
 
+    private List<Artifact> getArtifactResults(Artifact artifact, String artifactVersion, ProjectBuildingRequest buildingRequest) throws DependencyResolverException {
         Iterable<ArtifactResult> artifactResult = dependencyResolver.resolveDependencies(buildingRequest, toCoordinate(artifact, artifactVersion), null);
         List<Artifact> artifactResultList = new ArrayList<>();
         for (ArtifactResult a : artifactResult) {
@@ -420,6 +420,28 @@ public class SemVerMojo extends AbstractMojo {
                     !artifact.getArtifactId().equals(resolveArtifact.getArtifactId()) &&
                     !isExcludedDependency(resolveArtifact.getGroupId(), resolveArtifact.getArtifactId())) {
                 artifactResultList.add(resolveArtifact);
+            }
+        }
+        return artifactResultList;
+    }
+
+    private List<Artifact> getLocalProjectArtifactResults(ProjectBuildingRequest buildingRequest) throws DependencyResolverException {
+        String localGroupId = project.getGroupId();
+        String localArtifactId = project.getArtifactId();
+        String localVersion = project.getVersion();
+        DefaultDependableCoordinate localCoordinate = new DefaultDependableCoordinate();
+        localCoordinate.setGroupId(localGroupId);
+        localCoordinate.setArtifactId(localArtifactId);
+        localCoordinate.setVersion(localVersion);
+        Iterable<ArtifactResult> artifactResult = dependencyResolver.resolveDependencies(buildingRequest, localCoordinate, null);
+        List<Artifact> artifactResultList = new ArrayList<>();
+        for (ArtifactResult a : artifactResult) {
+            Artifact resolveArtifact = a.getArtifact();
+            if (!localGroupId.equals(resolveArtifact.getGroupId()) ||
+                    !localArtifactId.equals(resolveArtifact.getArtifactId())) {
+                if (!isExcludedDependency(resolveArtifact.getGroupId(), resolveArtifact.getArtifactId())) {
+                    artifactResultList.add(resolveArtifact);
+                }
             }
         }
         return artifactResultList;
