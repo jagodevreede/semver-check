@@ -145,19 +145,7 @@ public class UpdateVersionMojo extends AbstractMojo {
                     .max(Comparator.comparing((VersionInfo v) -> new DefaultArtifactVersion(v.getNextVersion()))
                             .thenComparing(v -> NONE.equals(v.getSemVerType()) ? 0 : 1))
                     .orElseThrow();
-            String nextVersion = maxVersionInfo.getNextVersion();
-            if (NONE.equals(maxVersionInfo.getSemVerType()) &&
-                    maxVersionInfo.getDependencies().stream()
-                            // We only need dependecies that are also modules of this multi-module project, and have a semver change
-                            .anyMatch(dep -> values.stream()
-                                    .anyMatch(v -> !NONE.equals(v.getSemVerType())))) {
-                // At this point the highest version is a NONE, but we have modules that have changed, need to set this to patch
-                nextVersion = getNextVersion(maxVersionInfo.getLastReleasedVersion(), PATCH);
-                getLog().info("Module " + maxVersionInfo.getArtifactId()
-                        + " has been determined highest version but is not changed, marking as patch to ensure everything can be released new version is: "
-                        + nextVersion);
-            }
-            VersionInfo updated = versionInfo.withUpdatedInfo(nextVersion, versionInfo.getSemVerType());
+            VersionInfo updated = versionInfo.withUpdatedInfo(maxVersionInfo.getNextVersion(), maxVersionInfo.getSemVerType());
             dataStore.store(updated);
         }
         if (SEMVER.equals(multiModuleStrategy)) {
