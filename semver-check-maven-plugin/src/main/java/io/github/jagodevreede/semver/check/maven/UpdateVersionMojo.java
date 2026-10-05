@@ -78,7 +78,12 @@ public class UpdateVersionMojo extends AbstractMojo {
         updateRootPomWithBom();
 
         for (VersionInfo versionInfo : allData.values()) {
-            String nextVersion = getNextVersionWithSnapshot(versionInfo.getNextVersion(), versionInfo);
+            String nextVersion = preserveHigherVersion(versionInfo, versionInfo.getNextVersion());
+            dataStore.store(versionInfo.withUpdatedInfo(nextVersion, versionInfo.getSemVerType()));
+        }
+
+        for (VersionInfo versionInfo : allData.values()) {
+            String nextVersion = preserveHigherVersion(versionInfo, getNextVersionWithSnapshot(versionInfo.getNextVersion(), versionInfo));
 
             try {
                 if (SEMVER.equals(multiModuleStrategy) && NONE.equals(versionInfo.getSemVerType())) {
@@ -104,7 +109,7 @@ public class UpdateVersionMojo extends AbstractMojo {
         }
         try {
             if (NONE.equals(rootVersionInfo.getSemVerType())) {
-                String nextVersion = getNextVersion(rootVersionInfo.getLastReleasedVersion(), PATCH);
+                String nextVersion = preserveHigherVersion(rootVersionInfo, getNextVersion(rootVersionInfo.getLastReleasedVersion(), PATCH));
                 getLog().info("Root POM has no semver change, marking as patch to ensure everything can be released new version is: " + nextVersion);
                 VersionInfo updatedRoot = rootVersionInfo.withUpdatedInfo(nextVersion, PATCH);
                 dataStore.store(updatedRoot);
@@ -122,8 +127,10 @@ public class UpdateVersionMojo extends AbstractMojo {
                         bomNextVersion = getNextVersion(bomVersionInfo.getLastReleasedVersion(), PATCH);
                         bomSemVerType = PATCH;
                     }
+                    bomNextVersion = preserveHigherVersion(bomVersionInfo, bomNextVersion);
                     getLog().info("Updating root POM with BOM version for " + bomInfo.getArtifactId() + " to " + bomNextVersion);
-                    VersionInfo updatedRoot = rootVersionInfo.withUpdatedInfo(bomNextVersion, bomSemVerType);
+                    String rootNextVersion = preserveHigherVersion(rootVersionInfo, bomNextVersion);
+                    VersionInfo updatedRoot = rootVersionInfo.withUpdatedInfo(rootNextVersion, bomSemVerType);
                     dataStore.store(updatedRoot);
                     updatePomVersion(bomVersionInfo, bomNextVersion);
                     updateOwnDependencies(bomVersionInfo, dataStore.getAll());
@@ -142,22 +149,22 @@ public class UpdateVersionMojo extends AbstractMojo {
     private void determineRealSemVerBasedOnStrategy(final Collection<VersionInfo> values, final VersionInfo versionInfo) {
         if (HIGHEST.equals(multiModuleStrategy)) {
             VersionInfo maxVersionInfo = values.stream()
-                    .max(Comparator.comparing((VersionInfo v) -> new DefaultArtifactVersion(v.getNextVersion()))
+                    .max(Comparator.comparing((VersionInfo v) -> new DefaultArtifactVersion(preserveHigherVersion(v, v.getNextVersion())))
                             .thenComparing(v -> NONE.equals(v.getSemVerType()) ? 0 : 1))
                     .orElseThrow();
-            VersionInfo updated = versionInfo.withUpdatedInfo(maxVersionInfo.getNextVersion(), maxVersionInfo.getSemVerType());
+            VersionInfo updated = versionInfo.withUpdatedInfo(preserveHigherVersion(maxVersionInfo, maxVersionInfo.getNextVersion()), maxVersionInfo.getSemVerType());
             dataStore.store(updated);
         }
         if (SEMVER.equals(multiModuleStrategy)) {
             if (NONE.equals(versionInfo.getSemVerType()) && "pom".equals(versionInfo.getPackaging())) {
                 boolean moduleHasDeclaredDependenciesToOtherModules = versionInfo.getDependencies().stream()
-                        // We only need dependecies that are also modules of this multi module project, and have a semver change
+                        // We only need dependencies that are also modules of this multi-module project, and have a semver change
                         .anyMatch(dep -> values.stream()
                                 .anyMatch(v -> !NONE.equals(v.getSemVerType()) && v.getGroupId().equals(dep.getGroupId()) && v.getArtifactId()
                                         .equals(dep.getArtifactId())));
                 if (moduleHasDeclaredDependenciesToOtherModules) {
                     // At this point the highest version is a NONE, but we have modules that have changed, need to set this to patch
-                    String nextVersion = getNextVersion(versionInfo.getLastReleasedVersion(), PATCH);
+                    String nextVersion = preserveHigherVersion(versionInfo, getNextVersion(versionInfo.getLastReleasedVersion(), PATCH));
                     getLog().info("Module " + versionInfo.getArtifactId()
                             + " has dependencies or dependency management that as versions marked for release, so this needs to be released as well to version: "
                             + nextVersion);
@@ -204,20 +211,18 @@ public class UpdateVersionMojo extends AbstractMojo {
                     }
                     if (dependency.getGroupId().equals(otherVersion.getGroupId())
                             && dependency.getArtifactId().equals(otherVersion.getArtifactId())) {
-                        String nextOtherVersion = getNextVersionWithSnapshot(otherVersion.getNextVersion(), otherVersion);
+                        String nextOtherVersion = preserveHigherVersion(otherVersion, getNextVersionWithSnapshot(otherVersion.getNextVersion(), otherVersion));
                         if (NONE.equals(otherVersion.getSemVerType()) && (SEMVER.equals(multiModuleStrategy)) && otherVersion.getLastReleasedVersion() != null) {
-                            if (setNoneToReleased) {
+                            if (setNoneToReleased && new DefaultArtifactVersion(otherVersion.getVersion()).compareTo(
+                                    new DefaultArtifactVersion(otherVersion.getLastReleasedVersion())) <= 0) {
                                 getLog().info("    Dependency " + dependency.getGroupId() + ":" + dependency.getArtifactId()
                                         + " has no semver change, updating to last released version: " + otherVersion.getLastReleasedVersion());
                                 nextOtherVersion = otherVersion.getLastReleasedVersion();
                             } else {
                                 nextOtherVersion = otherVersion.getVersion();
                             }
-                        } else {
-                            getLog().info(
-                                    "    Dependency " + dependency.getGroupId() + ":" + dependency.getArtifactId() + " updated to " + getNextVersionWithSnapshot(
-                                            otherVersion.getNextVersion(), otherVersion));
                         }
+                        getLog().info("    Dependency " + dependency.getGroupId() + ":" + dependency.getArtifactId() + " updated to " + nextOtherVersion);
                         if (PomHelper.setDependencyVersion(
                                 pom,
                                 dependency.getGroupId(),
@@ -244,6 +249,11 @@ public class UpdateVersionMojo extends AbstractMojo {
             return nextVersion + "-SNAPSHOT";
         }
         return nextVersion;
+    }
+
+    private String preserveHigherVersion(VersionInfo versionInfo, String nextVersion) {
+        return new DefaultArtifactVersion(versionInfo.getVersion()).compareTo(new DefaultArtifactVersion(nextVersion)) > 0
+                ? versionInfo.getVersion() : nextVersion;
     }
 
     private List<Dependency> getDeclaredDependenciesWithVersion(final Model model) {

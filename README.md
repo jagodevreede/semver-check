@@ -129,6 +129,8 @@ When a multi-module project is detected, the plugin uses `multiModuleStrategy` t
 bumps the version to match the highest change found across any module. `HIGHEST` is the strategy that a normal single version muiti-module project uses. Alternatives like 
 `SEMVER` evaluate each module independently.
 
+`update-version` does not lower an explicitly declared module version when the version computed from its last release is lower. This also applies to parent and BOM POMs and to references to reactor modules in dependency management. `writeFileOnNone=false` only controls output files from `check`; it does not change this version floor.
+
 ## Known limitations
 
 Java modules (JPMS) are not supported yet, tracked as
