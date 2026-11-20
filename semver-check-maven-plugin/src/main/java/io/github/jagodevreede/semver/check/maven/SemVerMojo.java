@@ -276,7 +276,7 @@ public class SemVerMojo extends AbstractMojo {
         }
         List<VersionInfo> versionInfoOfOtherModules = dataStore.getValues();
 
-        if (NONE.equals(semVerType) &&
+        if (!artifactVersions.isEmpty() && NONE.equals(semVerType) &&
                 project.getDependencies().stream()
                         // We only need dependecies that are also modules of this multi module project, and have a semver change
                         .anyMatch(dep -> versionInfoOfOtherModules.stream()
